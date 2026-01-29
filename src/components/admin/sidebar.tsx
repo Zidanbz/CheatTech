@@ -2,9 +2,7 @@
 import Link from 'next/link';
 import {
   LayoutGrid,
-  Package,
   ShoppingCart,
-  Users2,
   Settings,
   LogOut,
   CodeXml,
@@ -22,7 +20,6 @@ const mainNavItems = [
   { href: '/admin/products', label: 'Manajemen Produk', icon: Archive },
   { href: '/admin/landing-page', label: 'Landing Page', icon: LayoutDashboard },
   { href: '/admin/orders', label: 'Transaksi', icon: ShoppingCart },
-  { href: '/admin/customers', label: 'Pelanggan', icon: Users2 },
 ];
 
 const systemNavItems = [{ href: '/admin/settings', label: 'Pengaturan', icon: Settings }];
