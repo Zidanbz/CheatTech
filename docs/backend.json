@@ -6,10 +6,6 @@
       "type": "object",
       "description": "Represents a customer order for a product.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the order."
-        },
         "customerName": {
           "type": "string",
           "description": "Name of the customer placing the order."
@@ -23,23 +19,41 @@
           "type": "string",
           "description": "Reference to the Product. (Relationship: Product 1:N Order)"
         },
+        "productName": {
+          "type": "string",
+          "description": "Name of the product ordered."
+        },
         "orderDate": {
           "type": "string",
           "description": "Date and time when the order was placed.",
           "format": "date-time"
         },
+        "price": {
+          "type": "number",
+          "description": "The price of the order at the time of purchase."
+        },
         "userId": {
           "type": "string",
           "description": "The ID of the user who placed the order."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the order.",
+          "enum": [
+            "Pending",
+            "Completed"
+          ]
         }
       },
       "required": [
-        "id",
         "customerName",
         "customerEmail",
         "productId",
+        "productName",
         "orderDate",
-        "userId"
+        "price",
+        "userId",
+        "status"
       ]
     },
     "Product": {
@@ -48,13 +62,17 @@
       "type": "object",
       "description": "Represents a portfolio website template available for purchase.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the product."
-        },
         "name": {
           "type": "string",
           "description": "Name of the product."
+        },
+        "headline": {
+          "type": "string",
+          "description": "The main headline for the product's landing page."
+        },
+        "subheadline": {
+          "type": "string",
+          "description": "The sub-headline or short description."
         },
         "description": {
           "type": "string",
@@ -78,8 +96,9 @@
         }
       },
       "required": [
-        "id",
         "name",
+        "headline",
+        "subheadline",
         "description",
         "price",
         "imageUrl",

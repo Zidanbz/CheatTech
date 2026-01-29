@@ -13,11 +13,12 @@ export type Product = {
 
 export type Order = {
   id: string;
-  name: string;
-  email: string;
+  customerName: string;
+  customerEmail: string;
   productId: string;
   productName: string;
   price: number;
-  timestamp: Timestamp;
+  orderDate: Timestamp;
   userId: string;
+  status: 'Completed' | 'Pending';
 };
