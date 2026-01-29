@@ -86,7 +86,7 @@ export default function Home() {
                       <span dangerouslySetInnerHTML={{ __html: headline }} />
                   )}
                 </h1>
-                <p className="max-w-[600px] text-muted-foreground md:text-xl">
+                <div className="max-w-[600px] text-muted-foreground md:text-xl">
                   {isLoading ? (
                       <div className="space-y-2">
                           <Skeleton className="h-6 w-full" />
@@ -95,7 +95,7 @@ export default function Home() {
                   ) : (
                       subheadline
                   )}
-                </p>
+                </div>
                 <div className="flex flex-col gap-4 sm:flex-row items-center">
                   <Button asChild size="lg">
                     <Link href="/checkout">Beli Sekarang</Link>
