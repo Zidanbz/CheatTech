@@ -8,30 +8,33 @@ import {
   Settings,
   LogOut,
   CodeXml,
+  Archive,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
+import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 
-const navItems = [
+const mainNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutGrid },
-  { href: '/admin/products', label: 'Products', icon: Package },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
-  { href: '/admin/customers', label: 'Customers', icon: Users2 },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/products', label: 'Manajemen Produk', icon: Archive },
+  { href: '/admin/orders', label: 'Transaksi', icon: ShoppingCart },
+  { href: '/admin/customers', label: 'Pelanggan', icon: Users2 },
 ];
+
+const systemNavItems = [{ href: '/admin/settings', label: 'Pengaturan', icon: Settings }];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const auth = useAuth();
+  const { user } = useUser();
   const router = useRouter();
 
   const handleLogout = async () => {
     await auth.signOut();
     router.push('/admin/login');
   };
-
 
   return (
     <aside className="hidden w-64 flex-col border-r bg-background sm:flex">
@@ -41,30 +44,73 @@ export default function Sidebar() {
           <span>PortofolioKu</span>
         </Link>
       </div>
-      <nav className="flex-1 overflow-auto py-4">
-        <div className="grid items-start px-4 text-sm font-medium">
-          {navItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-                {
-                  'bg-muted text-primary': pathname === item.href,
-                }
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
+      <nav className="flex-1 overflow-auto py-4 px-4">
+        <div className="space-y-4">
+          <div>
+            <h3 className="px-3 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+              Menu Utama
+            </h3>
+            <div className="mt-2 grid items-start text-sm font-medium">
+              {mainNavItems.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                    {
+                      'bg-muted text-primary': pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href)),
+                    }
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h3 className="px-3 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+              Sistem
+            </h3>
+            <div className="mt-2 grid items-start text-sm font-medium">
+              {systemNavItems.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+                    {
+                      'bg-muted text-primary': pathname === item.href,
+                    }
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              ))}
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-3 py-2 text-muted-foreground hover:text-primary"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+                Keluar
+              </Button>
+            </div>
+          </div>
         </div>
       </nav>
-      <div className="mt-auto p-4">
-        <Button variant="ghost" className="w-full justify-start gap-3" onClick={handleLogout}>
-            <LogOut className="h-4 w-4" />
-            Logout
-        </Button>
+      <div className="mt-auto border-t p-4">
+         <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+                <AvatarImage src={user?.photoURL || "https://i.pravatar.cc/150?u=admin"} alt="@admin" />
+                <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-semibold">{user?.displayName || 'Admin PortofolioKu'}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </div>
+         </div>
       </div>
     </aside>
   );

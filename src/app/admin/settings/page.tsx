@@ -4,11 +4,11 @@ export default function SettingsPage() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Settings</CardTitle>
-                <CardDescription>Manage your application settings.</CardDescription>
+                <CardTitle>Pengaturan</CardTitle>
+                <CardDescription>Kelola pengaturan aplikasi Anda.</CardDescription>
             </CardHeader>
             <CardContent>
-                <p>Settings page is under construction.</p>
+                <p>Halaman Pengaturan sedang dalam pengembangan.</p>
             </CardContent>
         </Card>
     )

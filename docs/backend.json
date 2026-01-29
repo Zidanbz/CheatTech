@@ -93,6 +93,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the product is active and visible to customers."
         }
       },
       "required": [
@@ -102,7 +106,8 @@
         "description",
         "price",
         "imageUrl",
-        "features"
+        "features",
+        "active"
       ]
     }
   },

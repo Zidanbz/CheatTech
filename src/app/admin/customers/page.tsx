@@ -4,11 +4,11 @@ export default function CustomersPage() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Customers</CardTitle>
-                <CardDescription>View and manage your customers.</CardDescription>
+                <CardTitle>Pelanggan</CardTitle>
+                <CardDescription>Lihat dan kelola pelanggan Anda.</CardDescription>
             </CardHeader>
             <CardContent>
-                <p>Customers page is under construction.</p>
+                <p>Halaman Pelanggan sedang dalam pengembangan.</p>
             </CardContent>
         </Card>
     )

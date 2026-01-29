@@ -4,11 +4,11 @@ export default function OrdersPage() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Orders</CardTitle>
-                <CardDescription>View and manage all customer orders.</CardDescription>
+                <CardTitle>Transaksi</CardTitle>
+                <CardDescription>Lihat dan kelola semua pesanan pelanggan.</CardDescription>
             </CardHeader>
             <CardContent>
-                <p>Orders page is under construction.</p>
+                <p>Halaman Transaksi sedang dalam pengembangan.</p>
             </CardContent>
         </Card>
     )

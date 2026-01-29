@@ -28,7 +28,7 @@ const formSchema = z.object({
   email: z.string().email({ message: "Harap masukkan alamat email yang valid." }),
 });
 
-const defaultProductData: Omit<Product, 'id'> = {
+const defaultProductData: Omit<Product, 'id' | 'active'> & { active: boolean } = {
     name: "Template Portfolio Instan",
     headline: "Buat Kesan Pertama yang Tak Terlupakan",
     subheadline: "Tingkatkan personal branding Anda dengan template portfolio yang modern, profesional, dan mudah disesuaikan. Dapatkan pekerjaan impian Anda sekarang!",
@@ -36,6 +36,7 @@ const defaultProductData: Omit<Product, 'id'> = {
     features: ["Desain Modern & Responsif", "Mudah Disesuaikan", "SEO-Friendly", "Dukungan Penuh"],
     price: 149000,
     imageUrl: "https://picsum.photos/seed/cheatsheet/1200/800",
+    active: true,
 };
 
 export default function CheckoutPage() {
@@ -56,7 +57,7 @@ export default function CheckoutPage() {
             return { id: docSnap.id, ...docSnap.data() } as Product;
         } else {
             await setDoc(docRef, defaultProductData);
-            return { id, ...defaultProductData };
+            return { id, ...defaultProductData, active: true };
         }
     }
     if(firestore) {

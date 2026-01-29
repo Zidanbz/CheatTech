@@ -9,6 +9,7 @@ export type Product = {
   features: string[];
   price: number;
   imageUrl: string;
+  active: boolean;
 };
 
 export type Order = {
