@@ -42,8 +42,8 @@ export default function AdminLoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: 'admin@example.com',
-      password: 'password',
+      email: 'admincheattech@gmail.com',
+      password: 'CheatTech12',
     },
   });
   
@@ -133,7 +133,7 @@ export default function AdminLoginPage() {
             </form>
           </Form>
            <p className="mt-4 text-center text-xs text-muted-foreground">
-            Gunakan <strong>admin@example.com</strong> dan password <strong>password</strong> untuk login.
+            Gunakan <strong>admincheattech@gmail.com</strong> dan password <strong>CheatTech12</strong> untuk login.
           </p>
         </CardContent>
       </Card>
