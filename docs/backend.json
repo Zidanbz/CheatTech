@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Order",
       "type": "object",
-      "description": "Represents a customer order for a portfolio template.",
+      "description": "Represents a customer order for a product.",
       "properties": {
         "id": {
           "type": "string",
@@ -19,37 +19,42 @@
           "description": "Email address of the customer.",
           "format": "email"
         },
-        "templateId": {
+        "productId": {
           "type": "string",
-          "description": "Reference to the PortfolioTemplate. (Relationship: PortfolioTemplate 1:N Order)"
+          "description": "Reference to the Product. (Relationship: Product 1:N Order)"
         },
         "orderDate": {
           "type": "string",
           "description": "Date and time when the order was placed.",
           "format": "date-time"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who placed the order."
         }
       },
       "required": [
         "id",
         "customerName",
         "customerEmail",
-        "templateId",
-        "orderDate"
+        "productId",
+        "orderDate",
+        "userId"
       ]
     },
-    "PortfolioTemplate": {
+    "Product": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PortfolioTemplate",
+      "title": "Product",
       "type": "object",
       "description": "Represents a portfolio website template available for purchase.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the portfolio template."
+          "description": "Unique identifier for the product."
         },
         "name": {
           "type": "string",
-          "description": "Name of the portfolio template."
+          "description": "Name of the product."
         },
         "description": {
           "type": "string",
@@ -91,17 +96,17 @@
   "firestore": {
     "structure": [
       {
-        "path": "/portfolioTemplates/{portfolioTemplateId}",
+        "path": "/products/{productId}",
         "definition": {
-          "entityName": "PortfolioTemplate",
+          "entityName": "Product",
           "schema": {
-            "$ref": "#/backend/entities/PortfolioTemplate"
+            "$ref": "#/backend/entities/Product"
           },
-          "description": "Stores portfolio templates.  The 'portfolioTemplateId' is the unique identifier for each template.",
+          "description": "Stores products. The 'productId' is the unique identifier for each product.",
           "params": [
             {
-              "name": "portfolioTemplateId",
-              "description": "The unique identifier for the portfolio template."
+              "name": "productId",
+              "description": "The unique identifier for the product."
             }
           ]
         }
@@ -123,6 +128,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to address the reported Firestore error and support the application's features, focusing on security, scalability, and debuggability.  The structure prioritizes authorization independence by avoiding hierarchical authorization dependencies (`get()`). It uses structural segregation for homogeneous security postures and access modeling for standardization.  \n\nTo address the `INVALID_ARGUMENT` error, ensure that the data being written to Firestore conforms to the defined schema and that there are no invalid characters or data types. Also, check the Firebase SDK version used and update it if necessary.\n\nThe main collections are `portfolioTemplates` and `orders`. The `orders` collection stores order information, with each order document referencing a `portfolioTemplate` by `templateId`. There are no subcollections. This flat structure simplifies security rules and queries.\n\nThis structure also enables secure `list` operations (QAPs) by segregating the data according to its access needs.  Portfolio Templates are publicly accessible (for reading) and admin-manageable (for writing), while orders are readable by admins and writeable by authenticated users. The data required for authorization is present within each document (or the path), avoiding the need for `get()` calls in the security rules, which ensures authorization independence.\n"
+    "reasoning": "The Firestore structure is designed to address the reported Firestore error and support the application's features. The main collections are `products` and `orders`. The `orders` collection stores order information, with each order document referencing a `product` by `productId`. This flat structure simplifies security rules and queries. Products are publicly readable and writable for this prototype. Orders are listable by any signed-in user, and can only be created by the authenticated user who owns them."
   }
 }

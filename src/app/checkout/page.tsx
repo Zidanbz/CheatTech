@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useTransition, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { doc, getDoc, setDoc, collection, Timestamp } from 'firebase/firestore';
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useRouter } from "next/navigation";
@@ -43,6 +43,7 @@ export default function CheckoutPage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
@@ -71,10 +72,10 @@ export default function CheckoutPage() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!product || !firestore) {
+    if (!product || !firestore || !user) {
         toast({
             title: "Error",
-            description: "Informasi produk tidak ditemukan atau koneksi database gagal. Coba lagi nanti.",
+            description: "Informasi produk, koneksi database, atau sesi pengguna tidak tersedia. Coba lagi nanti.",
             variant: "destructive"
         });
         return;
@@ -89,6 +90,7 @@ export default function CheckoutPage() {
               productName: product.name,
               price: product.price,
               timestamp: Timestamp.now(),
+              userId: user.uid,
             };
             const ordersCollection = collection(firestore, 'orders');
             await addDocumentNonBlocking(ordersCollection, orderData);
@@ -104,7 +106,7 @@ export default function CheckoutPage() {
     });
   }
   
-  if (!product) {
+  if (!product || isUserLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -152,7 +154,7 @@ export default function CheckoutPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isPending}>
+                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isPending || !user}>
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Pesan Sekarang
                   </Button>

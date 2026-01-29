@@ -1,109 +1,54 @@
-/**
- * # Firestore Security Rules
- *
- * ## Core Philosophy
- * This ruleset establishes a clear boundary between publicly readable data and
- * private, user-specific data. Portfolio templates are treated as public
- * content that anyone can view, but which can only be managed by an administrator.
- * Customer orders are treated as private data that can only be created by an
- * authenticated user, with all read and management access reserved for administrators.
- * The default posture is to deny access unless explicitly and safely granted.
- *
- * ## Data Structure
- * The data model is flat, consisting of two top-level collections:
- * - `/portfolioTemplates/{portfolioTemplateId}`: Stores all available portfolio templates.
- * - `/orders/{orderId}`: Stores all customer orders.
- * There are no subcollections, which simplifies security logic and queries.
- *
- * ## Key Security Decisions
- * - **Admin-Managed Content**: All write operations (create, update, delete) on the
- *   public `/portfolioTemplates` collection are denied by default. These actions
- *   are intended for administrators, and placeholder rules (`// TODO`) have been
- *   added to indicate where admin-specific logic should be implemented.
- * - **Private Order Creation**: Authenticated users are permitted to create their own
- *   orders. To enforce this securely, the rules require that the `Order` document
- *   being created contains a `userId` field that matches the creator's authenticated
- *   UID. This denormalizes the ownership information directly onto the document,
- *   which is critical for security.
- * - **No Public Order Access**: There is no public access to the `/orders` collection.
- *   Listing or reading individual orders is disabled for clients, protecting customer
- *   privacy. These actions are reserved for a backend admin process.
- * - **No User Data Listing**: Users cannot list other users' data. The rules are
- *   structured to prevent any cross-user data access.
- *
- * ## Denormalization for Authorization
- * To create secure and performant rules, this ruleset relies on denormalized
- * authorization data. For example, the `/orders` collection requires a `userId`
- * field on each order document. This allows the rules to validate document
- * ownership on creation without performing extra reads, making the authorization
- * check fast and efficient.
- */
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to improve readability and maintainability.
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
      * @description
-     *   Portfolio Templates are public and can be read by anyone, including
-     *   unauthenticated users. Writes are restricted to administrators.
+     *   Products are public and can be read by anyone. For this prototype,
+     *   writes are also public to allow the app to function without a
+     *   full admin implementation.
      * @path
-     *   /portfolioTemplates/{portfolioTemplateId}
-     * @allow
-     *   (get) Any user, signed in or not, retrieving a single template.
-     * @deny
-     *   (create) An authenticated user trying to add a new template.
-     * @principle
-     *   Public Read with Owner-Only Writes. Since an admin model isn't defined,
-     *   all writes are currently disabled as a secure default.
+     *   /products/{productId}
      */
-    match /portfolioTemplates/{portfolioTemplateId} {
+    match /products/{productId} {
       allow get: if true;
       allow list: if true;
 
-      // CRITICAL: Cannot implement admin-only writes without a defined role system.
-      // All write operations are denied by default for security.
-      allow create: if false; // TODO: Replace with admin validation, e.g., `if isAdmin();`
-      allow update: if false; // TODO: Replace with admin validation, e.g., `if isAdmin() && resource != null;`
-      allow delete: if false; // TODO: Replace with admin validation, e.g., `if isAdmin() && resource != null;`
+      // WARNING: These rules are insecure for production.
+      // Any user can write to the products collection.
+      // This should be locked down to admin users in a real application.
+      allow create: if true;
+      allow update: if true;
+      allow delete: if false; // Deleting products is not a feature yet.
     }
 
     /**
      * @description
-     *   Orders are private documents. Authenticated users can create orders for
-     *   themselves, but cannot read, update, or delete any orders. Reading or
-     *   managing orders is reserved for administrators.
+     *   Orders are private documents. Authenticated users can create orders
+     *   for themselves. Listing orders is restricted to signed-in users
+     *   (acting as admins for this prototype).
      * @path
      *   /orders/{orderId}
-     * @allow
-     *   (create) A signed-in user creating a new order with their own `userId`.
-     * @deny
-     *   (create) A signed-in user creating an order but setting the `userId` to another user.
-     * @deny
-     *   (get) Any user trying to read any order document.
-     * @principle
-     *   Enforces Self-Creation with relational integrity. The create rule mandates
-     *   that a `userId` field matching the user's auth UID is present in the new
-     *   document, securely establishing ownership at the moment of creation.
      */
     match /orders/{orderId} {
-      // Reads are denied to protect customer privacy. This should be handled by a trusted server environment (e.g., Cloud Functions for admins).
+      // Deny direct client reads of single orders to protect customer privacy.
       allow get: if false;
-      allow list: if false;
 
-      // An authenticated user can create an order.
-      // The rule forces the client to add a `userId` field to the document that matches the creator's UID.
+      // Allow signed-in users (admins) to list all orders for the dashboard.
+      allow list: if isSignedIn();
+
+      // An authenticated user can create an order for themselves.
+      // The `userId` in the new document must match the creator's UID.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
 
-      // Updating and deleting orders is disabled for clients. This should be handled by admins.
-      // An ownership check (`resource.data.userId == request.auth.uid`) cannot be safely implemented here
-      // because the `Order` entity in the IR is missing the required `userId` field.
-      allow update: if false; // TODO: Implement admin or owner-based logic once schema includes `userId`.
-      allow delete: if false; // TODO: Implement admin or owner-based logic once schema includes `userId`.
+      // Updating and deleting orders is disabled for clients. This should be an admin task.
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }

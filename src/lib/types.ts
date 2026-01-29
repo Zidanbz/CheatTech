@@ -19,4 +19,5 @@ export type Order = {
   productName: string;
   price: number;
   timestamp: Timestamp;
+  userId: string;
 };
