@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents a customer order for a portfolio template.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the order."
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Name of the customer placing the order."
+        },
+        "customerEmail": {
+          "type": "string",
+          "description": "Email address of the customer.",
+          "format": "email"
+        },
+        "templateId": {
+          "type": "string",
+          "description": "Reference to the PortfolioTemplate. (Relationship: PortfolioTemplate 1:N Order)"
+        },
+        "orderDate": {
+          "type": "string",
+          "description": "Date and time when the order was placed.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "customerName",
+        "customerEmail",
+        "templateId",
+        "orderDate"
+      ]
+    },
+    "PortfolioTemplate": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PortfolioTemplate",
+      "type": "object",
+      "description": "Represents a portfolio website template available for purchase.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the portfolio template."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the portfolio template."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the template features and benefits."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the template."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the image showcasing the template.",
+          "format": "uri"
+        },
+        "features": {
+          "type": "array",
+          "description": "List of key features offered by the template.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "price",
+        "imageUrl",
+        "features"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/portfolioTemplates/{portfolioTemplateId}",
+        "definition": {
+          "entityName": "PortfolioTemplate",
+          "schema": {
+            "$ref": "#/backend/entities/PortfolioTemplate"
+          },
+          "description": "Stores portfolio templates.  The 'portfolioTemplateId' is the unique identifier for each template.",
+          "params": [
+            {
+              "name": "portfolioTemplateId",
+              "description": "The unique identifier for the portfolio template."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores customer orders. The 'orderId' is the unique identifier for each order.",
+          "params": [
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to address the reported Firestore error and support the application's features, focusing on security, scalability, and debuggability.  The structure prioritizes authorization independence by avoiding hierarchical authorization dependencies (`get()`). It uses structural segregation for homogeneous security postures and access modeling for standardization.  \n\nTo address the `INVALID_ARGUMENT` error, ensure that the data being written to Firestore conforms to the defined schema and that there are no invalid characters or data types. Also, check the Firebase SDK version used and update it if necessary.\n\nThe main collections are `portfolioTemplates` and `orders`. The `orders` collection stores order information, with each order document referencing a `portfolioTemplate` by `templateId`. There are no subcollections. This flat structure simplifies security rules and queries.\n\nThis structure also enables secure `list` operations (QAPs) by segregating the data according to its access needs.  Portfolio Templates are publicly accessible (for reading) and admin-manageable (for writing), while orders are readable by admins and writeable by authenticated users. The data required for authorization is present within each document (or the path), avoiding the need for `get()` calls in the security rules, which ensures authorization independence.\n"
+  }
+}
