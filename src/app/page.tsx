@@ -14,6 +14,7 @@ import {
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { LandingPage, Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion';
 
 const featureIcons = [
   <CheckCircle key="check" className="size-8 text-primary" />,
@@ -40,14 +41,38 @@ export default function Home() {
   const { data: products, isLoading: isLoadingProducts } =
     useCollection<Product>(productsQuery);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { duration: 0.5 },
+    },
+  };
+
   return (
     <div className="flex flex-col min-h-dvh bg-background">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="w-full py-20 md:py-32 lg:py-40 bg-accent">
+        <section className="w-full py-20 md:py-32 lg:py-40 bg-accent overflow-hidden">
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-16 items-center">
-              <div className="flex flex-col justify-center space-y-6">
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex flex-col justify-center space-y-6"
+              >
                 <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium w-fit">
                   TERBARU V2.4
                 </div>
@@ -111,13 +136,21 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-center">
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex items-center justify-center"
+              >
                 {isLoadingContent ? (
                   <Skeleton className="h-[350px] w-[550px] rounded-xl" />
                 ) : (
                   <Image
-                    src={content?.heroImageUrl || "https://picsum.photos/seed/hero-image/600/400"}
+                    src={
+                      content?.heroImageUrl ||
+                      'https://picsum.photos/seed/hero-image/600/400'
+                    }
                     width={550}
                     height={350}
                     alt="Product preview"
@@ -125,13 +158,19 @@ export default function Home() {
                     data-ai-hint="browser mockup"
                   />
                 )}
-              </div>
+              </motion.div>
             </div>
           </div>
         </section>
 
         {/* Kenapa Sulit Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32">
+        <motion.section
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.5 }}
+          className="w-full py-12 md:py-24 lg:py-32"
+        >
           <div className="container mx-auto px-4 md:px-6 text-center max-w-3xl">
             {isLoadingContent ? (
               <div className="space-y-4">
@@ -144,18 +183,27 @@ export default function Home() {
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-4">
                   {content?.problemHeadline}
                 </h2>
-                <p className="text-muted-foreground text-lg">
+                <div className="text-muted-foreground text-lg">
                   {content?.problemText}
-                </p>
+                </div>
               </>
             )}
           </div>
-        </section>
+        </motion.section>
 
         {/* Features Section */}
-        <section id="keuntungan" className="w-full py-12 md:py-24 lg:py-32 bg-secondary">
+        <section
+          id="keuntungan"
+          className="w-full py-12 md:py-24 lg:py-32 bg-secondary"
+        >
           <div className="container mx-auto px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col items-center justify-center space-y-4 text-center mb-12"
+            >
               {isLoadingContent ? (
                 <div className="space-y-4 w-full max-w-3xl">
                   <Skeleton className="h-8 w-32 mx-auto" />
@@ -175,8 +223,14 @@ export default function Home() {
                   </p>
                 </>
               )}
-            </div>
-            <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3">
+            </motion.div>
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3"
+            >
               {isLoadingContent
                 ? Array(3)
                     .fill(0)
@@ -192,8 +246,9 @@ export default function Home() {
                       </div>
                     ))
                 : content?.features.map((feature, index) => (
-                    <div
+                    <motion.div
                       key={index}
+                      variants={itemVariants}
                       className="grid gap-4 text-center p-6 rounded-lg bg-background shadow-md"
                     >
                       <div className="flex justify-center">
@@ -205,16 +260,22 @@ export default function Home() {
                       <p className="text-sm text-muted-foreground">
                         {feature.description}
                       </p>
-                    </div>
+                    </motion.div>
                   ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
         {/* Templates Section */}
         <section id="template" className="w-full py-12 md:py-24 lg:py-32">
           <div className="container mx-auto px-4 md:px-6">
-            <div className="flex justify-between items-center mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.5 }}
+              className="flex justify-between items-center mb-8"
+            >
               <div>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
                   Pilihan Template Terbaik
@@ -227,8 +288,14 @@ export default function Home() {
               <Button variant="link" asChild>
                 <Link href="/produk">Lihat Semua →</Link>
               </Button>
-            </div>
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            </motion.div>
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
+            >
               {isLoadingProducts
                 ? Array.from({ length: 3 }).map((_, i) => (
                     <Card key={i}>
@@ -246,38 +313,40 @@ export default function Home() {
                     </Card>
                   ))
                 : products?.map((product) => (
-                    <Card key={product.id}>
-                      <CardContent className="p-0">
-                        <Image
-                          src={product.imageUrl}
-                          alt={product.name}
-                          width={400}
-                          height={300}
-                          className="rounded-t-lg w-full aspect-[4/3] object-cover"
-                          data-ai-hint="portfolio website"
-                        />
-                        <div className="p-4">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-bold text-lg">
-                              {product.name}
-                            </h3>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1 mb-4 h-10 line-clamp-2">
-                            {product.subheadline}
-                          </p>
-                          <div className="flex justify-between items-center">
-                            <p className="font-bold">
-                              Rp {product.price.toLocaleString('id-ID')}
+                    <motion.div key={product.id} variants={itemVariants}>
+                      <Card>
+                        <CardContent className="p-0">
+                          <Image
+                            src={product.imageUrl}
+                            alt={product.name}
+                            width={400}
+                            height={300}
+                            className="rounded-t-lg w-full aspect-[4/3] object-cover"
+                            data-ai-hint="portfolio website"
+                          />
+                          <div className="p-4">
+                            <div className="flex justify-between items-start">
+                              <h3 className="font-bold text-lg">
+                                {product.name}
+                              </h3>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1 mb-4 h-10 line-clamp-2">
+                              {product.subheadline}
                             </p>
-                            <Button variant="outline" size="sm" asChild>
-                              <Link href="/produk">Detail</Link>
-                            </Button>
+                            <div className="flex justify-between items-center">
+                              <p className="font-bold">
+                                Rp {product.price.toLocaleString('id-ID')}
+                              </p>
+                              <Button variant="outline" size="sm" asChild>
+                                <Link href="/produk">Detail</Link>
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -287,22 +356,35 @@ export default function Home() {
           className="w-full py-12 md:py-24 lg:py-32 bg-secondary"
         >
           <div className="container text-center">
-            {isLoadingContent ? (
-              <div className="space-y-4 max-w-2xl mx-auto">
-                <Skeleton className="h-10 w-2/3 mx-auto" />
-                <Skeleton className="h-6 w-full" />
-              </div>
-            ) : (
-              <>
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
-                  {content?.stepsSectionHeadline}
-                </h2>
-                <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-lg">
-                  {content?.stepsSectionSubheadline}
-                </p>
-              </>
-            )}
-            <div className="grid md:grid-cols-3 gap-8 mt-12 max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.5 }}
+            >
+              {isLoadingContent ? (
+                <div className="space-y-4 max-w-2xl mx-auto">
+                  <Skeleton className="h-10 w-2/3 mx-auto" />
+                  <Skeleton className="h-6 w-full" />
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
+                    {content?.stepsSectionHeadline}
+                  </h2>
+                  <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-lg">
+                    {content?.stepsSectionSubheadline}
+                  </p>
+                </>
+              )}
+            </motion.div>
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              className="grid md:grid-cols-3 gap-8 mt-12 max-w-4xl mx-auto"
+            >
               {isLoadingContent
                 ? Array(3)
                     .fill(0)
@@ -318,8 +400,9 @@ export default function Home() {
                       </div>
                     ))
                 : content?.steps.map((step, index) => (
-                    <div
+                    <motion.div
                       key={index}
+                      variants={itemVariants}
                       className="flex flex-col items-center text-center"
                     >
                       <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-xl mb-4">
@@ -329,70 +412,90 @@ export default function Home() {
                       <p className="text-muted-foreground text-sm">
                         {step.description}
                       </p>
-                    </div>
+                    </motion.div>
                   ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
         {/* Pricing Section */}
         <section id="harga" className="w-full py-12 md:py-24 lg:py-32">
           <div className="container">
-            <Card className="max-w-sm mx-auto shadow-xl rounded-lg overflow-hidden">
-              <CardContent className="p-0 text-center">
-                <div className="bg-primary text-primary-foreground p-6">
-                  <h3 className="font-semibold">Single Template</h3>
-                  <p className="text-4xl font-bold mt-2">Rp 49rb</p>
-                  <p className="text-sm opacity-80">
-                    Harga per template, sekali bayar.
-                  </p>
-                </div>
-                <div className="p-6">
-                  <ul className="grid gap-3 text-left text-sm mb-6">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Akses File 1 Template Pilihan
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Update Gratis Seumur Hidup
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Dokumentasi & Panduan Install
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Akses Source Code (React+Next.js)
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Siap Deploy (Mobile Friendly)
-                    </li>
-                  </ul>
-                  <Button asChild size="lg" className="w-full">
-                    <Link href="/checkout">Pilih Template</Link>
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Pilih template lainnya di atas untuk membeli.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="max-w-sm mx-auto shadow-xl rounded-lg overflow-hidden">
+                <CardContent className="p-0 text-center">
+                  <div className="bg-primary text-primary-foreground p-6">
+                    <h3 className="font-semibold">Single Template</h3>
+                    <p className="text-4xl font-bold mt-2">Rp 49rb</p>
+                    <p className="text-sm opacity-80">
+                      Harga per template, sekali bayar.
+                    </p>
+                  </div>
+                  <div className="p-6">
+                    <ul className="grid gap-3 text-left text-sm mb-6">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Akses File 1 Template Pilihan
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Update Gratis Seumur Hidup
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Dokumentasi & Panduan Install
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Akses Source Code (React+Next.js)
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Siap Deploy (Mobile Friendly)
+                      </li>
+                    </ul>
+                    <Button asChild size="lg" className="w-full">
+                      <Link href="/checkout">Pilih Template</Link>
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-4">
+                      Pilih template lainnya di atas untuk membeli.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         </section>
 
         {/* Testimonials Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-secondary">
           <div className="container mx-auto px-4 md:px-6">
-            {isLoadingContent ? (
-              <Skeleton className="h-10 w-1/3 mx-auto mb-12" />
-            ) : (
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl text-center mb-12">
-                {content?.testimonialsSectionHeadline}
-              </h2>
-            )}
-            <div className="grid gap-8 md:grid-cols-3">
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.5 }}
+            >
+              {isLoadingContent ? (
+                <Skeleton className="h-10 w-1/3 mx-auto mb-12" />
+              ) : (
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl text-center mb-12">
+                  {content?.testimonialsSectionHeadline}
+                </h2>
+              )}
+            </motion.div>
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              className="grid gap-8 md:grid-cols-3"
+            >
               {isLoadingContent
                 ? Array(3)
                     .fill(0)
@@ -414,38 +517,42 @@ export default function Home() {
                       </Card>
                     ))
                 : content?.testimonials?.map((testimonial, index) => (
-                    <Card key={index}>
-                      <CardContent className="p-6">
-                        <div className="flex mb-2">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className="h-5 w-5 text-yellow-400 fill-yellow-400"
-                            />
-                          ))}
-                        </div>
-                        <p className="text-muted-foreground mb-4">
-                          "{testimonial.quote}"
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <Image
-                            src={testimonial.avatar}
-                            width={40}
-                            height={40}
-                            alt={testimonial.name}
-                            className="rounded-full"
-                          />
-                          <div>
-                            <p className="font-semibold">{testimonial.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {testimonial.role}
-                            </p>
+                    <motion.div key={index} variants={itemVariants}>
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex mb-2">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className="h-5 w-5 text-yellow-400 fill-yellow-400"
+                              />
+                            ))}
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                          <p className="text-muted-foreground mb-4">
+                            "{testimonial.quote}"
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <Image
+                              src={testimonial.avatar}
+                              width={40}
+                              height={40}
+                              alt={testimonial.name}
+                              className="rounded-full"
+                            />
+                            <div>
+                              <p className="font-semibold">
+                                {testimonial.name}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {testimonial.role}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   ))}
-            </div>
+            </motion.div>
           </div>
         </section>
       </main>
