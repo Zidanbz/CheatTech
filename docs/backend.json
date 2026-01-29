@@ -41,7 +41,8 @@
           "description": "The current status of the order.",
           "enum": [
             "Pending",
-            "Completed"
+            "Completed",
+            "Processed"
           ]
         }
       },

@@ -21,5 +21,5 @@ export type Order = {
   price: number;
   orderDate: Timestamp;
   userId: string;
-  status: 'Completed' | 'Pending';
+  status: 'Completed' | 'Pending' | 'Processed';
 };

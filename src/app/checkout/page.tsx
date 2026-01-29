@@ -98,14 +98,16 @@ export default function CheckoutPage() {
             const ordersCollection = collection(firestore, 'orders');
             await addDocumentNonBlocking(ordersCollection, orderData);
             
-            // For demo purposes, let's also create a "Completed" order
-            const completedOrderData = {
+            // For demo purposes, let's also create a "Completed" and "Processed" order
+            const randomStatus = Math.random() > 0.4 ? 'Completed' : 'Processed';
+            const demoOrderData = {
               ...orderData,
-              status: 'Completed' as const,
+              status: randomStatus as ('Completed' | 'Processed'),
               orderDate: Timestamp.fromMillis(Timestamp.now().toMillis() - 86400000 * Math.floor(Math.random() * 5) ), // random date in last 5 days
-              customerName: ['Andi Pratama', 'Jessica Tan', 'Budi Wijaya'][Math.floor(Math.random() * 3)],
+              customerName: ['Andi Pratama', 'Jessica Tan', 'Budi Wijaya', 'Sarah Amalia', 'Budi Kurniawan'][Math.floor(Math.random() * 5)],
+              productName: ['Minimalist Folio', 'Creative Dev', 'Business Pro'][Math.floor(Math.random() * 3)],
             };
-            await addDocumentNonBlocking(ordersCollection, completedOrderData);
+            await addDocumentNonBlocking(ordersCollection, demoOrderData);
 
             router.push('/sukses');
           } catch (e) {
