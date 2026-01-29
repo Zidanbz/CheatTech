@@ -29,3 +29,13 @@ export type LandingPage = {
   heroHeadline: string;
   heroSubheadline: string;
 };
+
+export type Voucher = {
+  id: string;
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  expiryDate: Timestamp;
+  isActive: boolean;
+  usageCount: number;
+};

@@ -8,6 +8,7 @@ import {
   CodeXml,
   Archive,
   LayoutDashboard,
+  Ticket,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ const mainNavItems = [
   { href: '/admin/products', label: 'Manajemen Produk', icon: Archive },
   { href: '/admin/landing-page', label: 'Landing Page', icon: LayoutDashboard },
   { href: '/admin/orders', label: 'Transaksi', icon: ShoppingCart },
+  { href: '/admin/vouchers', label: 'Manajemen Voucher', icon: Ticket },
 ];
 
 const systemNavItems = [{ href: '/admin/settings', label: 'Pengaturan', icon: Settings }];

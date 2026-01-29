@@ -63,5 +63,16 @@ service cloud.firestore {
       allow create, update: if isSignedIn();
       allow delete: if false;
     }
+
+    /**
+     * @description
+     *  Vouchers for discounts. Can only be managed by admins.
+     * @path
+     *  /vouchers/{voucherId}
+     */
+    match /vouchers/{voucherId} {
+      allow read, list, create, update: if isSignedIn();
+      allow delete: if false;
+    }
   }
 }

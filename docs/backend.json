@@ -1,5 +1,48 @@
 {
   "entities": {
+    "Voucher": {
+      "title": "Voucher",
+      "type": "object",
+      "description": "Represents a discount voucher for orders.",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "The unique code for the voucher."
+        },
+        "discountType": {
+          "type": "string",
+          "description": "The type of discount.",
+          "enum": [
+            "percentage",
+            "fixed"
+          ]
+        },
+        "discountValue": {
+          "type": "number",
+          "description": "The value of the discount (either percentage or fixed amount)."
+        },
+        "expiryDate": {
+          "type": "string",
+          "description": "The expiration date of the voucher.",
+          "format": "date-time"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the voucher is currently active."
+        },
+        "usageCount": {
+          "type": "number",
+          "description": "How many times the voucher has been used."
+        }
+      },
+      "required": [
+        "code",
+        "discountType",
+        "discountValue",
+        "expiryDate",
+        "isActive"
+      ]
+    },
     "Order": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Order",
@@ -183,6 +226,22 @@
             {
               "name": "pageId",
               "description": "The unique identifier for the page content, e.g., 'main'."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/vouchers/{voucherId}",
+        "definition": {
+          "entityName": "Voucher",
+          "schema": {
+            "$ref": "#/backend/entities/Voucher"
+          },
+          "description": "Stores discount vouchers. The 'voucherId' is the unique identifier.",
+          "params": [
+            {
+              "name": "voucherId",
+              "description": "The unique identifier for the voucher."
             }
           ]
         }
