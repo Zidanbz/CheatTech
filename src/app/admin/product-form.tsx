@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, useFormState } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Product } from '@/lib/types';
-import { updateProductAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { CardContent } from '@/components/ui/card';
 import { useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const formSchema = z.object({
   name: z.string().min(1, "Nama produk tidak boleh kosong"),
@@ -36,6 +38,7 @@ type FormData = z.infer<typeof formSchema>;
 export default function ProductForm({ product }: { product: Product }) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -50,25 +53,25 @@ export default function ProductForm({ product }: { product: Product }) {
   });
 
   async function onSubmit(data: FormData) {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      formData.append(key, String(value));
-    });
-
-    startTransition(async () => {
-      const result = await updateProductAction(product.id, formData);
-      if (result?.error) {
-        toast({
-          title: 'Error',
-          description: `Gagal memperbarui: ${JSON.stringify(result.error)}`,
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Sukses',
-          description: 'Produk berhasil diperbarui.',
-        });
-      }
+    startTransition(() => {
+        try {
+            const docRef = doc(firestore, 'products', product.id);
+            const updateData = {
+              ...data,
+              features: data.features.split(',').map(s => s.trim())
+            };
+            updateDocumentNonBlocking(docRef, updateData);
+            toast({
+                title: 'Sukses',
+                description: 'Produk berhasil diperbarui.',
+            });
+        } catch (result) {
+            toast({
+              title: 'Error',
+              description: `Gagal memperbarui: ${JSON.stringify(result)}`,
+              variant: 'destructive',
+            });
+        }
     });
   }
 

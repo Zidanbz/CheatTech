@@ -1,13 +1,16 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { Product } from "@/lib/types";
 import { Loader2, Wand2 } from "lucide-react";
 import { useState, useTransition } from "react";
-import { generateHeadlinesAction, updateProductAction } from "./actions";
+import { generateHeadlinesAction } from "./actions";
+import { useFirestore } from "@/firebase";
+import { doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function HeadlineGenerator({ product }: { product: Product }) {
     const [isGenerating, startGenerating] = useTransition();
@@ -15,6 +18,7 @@ export default function HeadlineGenerator({ product }: { product: Product }) {
     const [description, setDescription] = useState(product.description);
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const { toast } = useToast();
+    const firestore = useFirestore();
 
     const handleGenerate = () => {
         startGenerating(async () => {
@@ -37,27 +41,19 @@ export default function HeadlineGenerator({ product }: { product: Product }) {
     };
 
     const handleApplyHeadline = (headline: string) => {
-        startSaving(async () => {
-            const formData = new FormData();
-            formData.append('headline', headline);
-            // We need to pass all fields to satisfy the schema, even if not changing them
-            formData.append('name', product.name);
-            formData.append('subheadline', product.subheadline);
-            formData.append('description', product.description);
-            formData.append('price', String(product.price));
-            formData.append('features', product.features.join(', '));
-            
-            const result = await updateProductAction(product.id, formData);
-            if(result.error) {
-                 toast({
-                    title: "Gagal Menyimpan",
-                    description: `Gagal menyimpan headline: ${JSON.stringify(result.error)}`,
-                    variant: "destructive"
-                });
-            } else {
+        startSaving(() => {
+            try {
+                const docRef = doc(firestore, 'products', product.id);
+                updateDocumentNonBlocking(docRef, { headline });
                  toast({
                     title: "Sukses!",
                     description: "Headline produk berhasil diperbarui."
+                });
+            } catch(e) {
+                 toast({
+                    title: "Gagal Menyimpan",
+                    description: `Gagal menyimpan headline: ${JSON.stringify(e)}`,
+                    variant: "destructive"
                 });
             }
         });

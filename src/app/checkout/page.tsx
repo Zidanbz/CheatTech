@@ -14,31 +14,53 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { submitOrder } from "./actions";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { getProduct } from "@/lib/firestore";
 import type { Product } from "@/lib/types";
-import { useEffect } from "react";
+import { useFirestore } from "@/firebase";
+import { doc, getDoc, setDoc, collection, Timestamp } from 'firebase/firestore';
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Nama harus memiliki setidaknya 2 karakter." }),
   email: z.string().email({ message: "Harap masukkan alamat email yang valid." }),
 });
 
+const defaultProductData: Omit<Product, 'id'> = {
+    name: "Template Portfolio Instan",
+    headline: "Buat Kesan Pertama yang Tak Terlupakan",
+    subheadline: "Tingkatkan personal branding Anda dengan template portfolio yang modern, profesional, dan mudah disesuaikan. Dapatkan pekerjaan impian Anda sekarang!",
+    description: "Buat portfolio profesional dalam hitungan menit dengan template siap pakai kami. Dirancang untuk mahasiswa dan fresh graduate untuk memamerkan proyek dan keterampilan mereka secara efektif.",
+    features: ["Desain Modern & Responsif", "Mudah Disesuaikan", "SEO-Friendly", "Dukungan Penuh"],
+    price: 149000,
+    imageUrl: "https://picsum.photos/seed/cheatsheet/1200/800",
+};
+
 export default function CheckoutPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const router = useRouter();
 
   useEffect(() => {
-    async function fetchProduct() {
-      const p = await getProduct('main-template');
-      setProduct(p);
+    async function getProduct(id: string): Promise<Product> {
+        const docRef = doc(firestore, 'products', id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            return { id: docSnap.id, ...docSnap.data() } as Product;
+        } else {
+            await setDoc(docRef, defaultProductData);
+            return { id, ...defaultProductData };
+        }
     }
-    fetchProduct();
-  }, []);
+    if(firestore) {
+      getProduct('main-template').then(setProduct);
+    }
+  }, [firestore]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,24 +71,36 @@ export default function CheckoutPage() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!product) {
+    if (!product || !firestore) {
         toast({
             title: "Error",
-            description: "Informasi produk tidak ditemukan. Coba lagi nanti.",
+            description: "Informasi produk tidak ditemukan atau koneksi database gagal. Coba lagi nanti.",
             variant: "destructive"
         });
         return;
     }
 
     startTransition(async () => {
-      const result = await submitOrder(values, product);
-      if (result.error) {
-        toast({
-          title: "Terjadi Kesalahan",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
+        try {
+            const orderData = {
+              name: values.name,
+              email: values.email,
+              productId: product.id,
+              productName: product.name,
+              price: product.price,
+              timestamp: Timestamp.now(),
+            };
+            const ordersCollection = collection(firestore, 'orders');
+            await addDocumentNonBlocking(ordersCollection, orderData);
+            router.push('/sukses');
+          } catch (e) {
+            console.error("Gagal membuat pesanan:", e);
+            toast({
+              title: "Terjadi Kesalahan",
+              description: "Gagal menyimpan pesanan. Silakan coba lagi.",
+              variant: "destructive",
+            });
+          }
     });
   }
   

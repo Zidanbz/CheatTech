@@ -1,9 +1,15 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
-import { getProduct } from "@/lib/firestore";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { CheckCircle, Palette, LayoutTemplate, Zap, ShieldCheck } from "lucide-react";
+import { CheckCircle, Palette, LayoutTemplate, Zap, ShieldCheck, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import type { Product } from "@/lib/types";
+import { useFirestore } from "@/firebase";
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
 
 const featureDetails = {
   "Desain Modern & Responsif": {
@@ -24,10 +30,52 @@ const featureDetails = {
   }
 };
 
+const defaultProductData: Omit<Product, 'id'> = {
+    name: "Template Portfolio Instan",
+    headline: "Buat Kesan Pertama yang Tak Terlupakan",
+    subheadline: "Tingkatkan personal branding Anda dengan template portfolio yang modern, profesional, dan mudah disesuaikan. Dapatkan pekerjaan impian Anda sekarang!",
+    description: "Buat portfolio profesional dalam hitungan menit dengan template siap pakai kami. Dirancang untuk mahasiswa dan fresh graduate untuk memamerkan proyek dan keterampilan mereka secara efektif.",
+    features: ["Desain Modern & Responsif", "Mudah Disesuaikan", "SEO-Friendly", "Dukungan Penuh"],
+    price: 149000,
+    imageUrl: "https://picsum.photos/seed/cheatsheet/1200/800",
+};
 
-export default async function ProductPage() {
-  const product = await getProduct('main-template');
+
+export default function ProductPage() {
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const firestore = useFirestore();
+  
+  useEffect(() => {
+    async function getProduct(id: string): Promise<Product> {
+        const docRef = doc(firestore, 'products', id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            return { id: docSnap.id, ...docSnap.data() } as Product;
+        } else {
+            await setDoc(docRef, defaultProductData);
+            return { id, ...defaultProductData };
+        }
+    }
+    if (firestore) {
+      setIsLoading(true);
+      getProduct('main-template').then(p => {
+        setProduct(p);
+        setIsLoading(false);
+      });
+    }
+  }, [firestore]);
+  
   const productImage = PlaceHolderImages.find(p => p.id === 'product-template-preview');
+  
+  if (isLoading || !product) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
   
   return (
     <div className="container mx-auto px-4 py-12 md:px-6 md:py-16">
