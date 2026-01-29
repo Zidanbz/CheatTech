@@ -9,7 +9,7 @@ import {
   LogOut,
   CodeXml,
 } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { useAuth } from '@/firebase';
@@ -25,6 +25,13 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const auth = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push('/admin/login');
+  };
+
 
   return (
     <aside className="hidden w-64 flex-col border-r bg-background sm:flex">
@@ -54,7 +61,7 @@ export default function Sidebar() {
         </div>
       </nav>
       <div className="mt-auto p-4">
-        <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => auth.signOut()}>
+        <Button variant="ghost" className="w-full justify-start gap-3" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
             Logout
         </Button>

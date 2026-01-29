@@ -11,10 +11,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 export default function AdminHeader() {
   const auth = useAuth();
+  const { user } = useUser();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    // Firebase provider akan handle anonymous sign-in, kita redirect manual
+    router.push('/admin/login');
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-6">
@@ -30,21 +39,23 @@ export default function AdminHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-9 w-9">
-                <AvatarImage src="https://i.pravatar.cc/150?u=admin" alt="@admin" />
-                <AvatarFallback>AU</AvatarFallback>
+                <AvatarImage src={user?.photoURL || "https://i.pravatar.cc/150?u=admin"} alt="@admin" />
+                <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>
-              <p>Admin Utama</p>
-              <p className="text-xs font-normal text-muted-foreground">Super Admin</p>
+              <p>{user?.displayName || 'Admin Utama'}</p>
+              <p className="text-xs font-normal text-muted-foreground">
+                {user?.email || 'Super Admin'}
+              </p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuItem>Support</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => auth.signOut()}>Logout</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
