@@ -7,7 +7,7 @@ import OrdersList from './orders-list';
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import type { Order, Product } from "@/lib/types";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { doc, getDoc, setDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { Loader2 } from "lucide-react";
 
@@ -26,8 +26,14 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
+    async function fetchData() {
+      if (!firestore || !user) return;
+
+      setIsLoading(true);
+
       async function getProduct(id: string): Promise<Product> {
         const docRef = doc(firestore, 'products', id);
         const docSnap = await getDoc(docRef);
@@ -43,32 +49,46 @@ export default function AdminPage() {
       async function getOrders(): Promise<Order[]> {
           const q = query(collection(firestore, 'orders'), orderBy("timestamp", "desc"));
           const querySnapshot = await getDocs(q);
-          const orders: Order[] = [];
+          const ordersData: Order[] = [];
           querySnapshot.forEach((doc) => {
-              orders.push({ id: doc.id, ...doc.data() } as Order);
+              ordersData.push({ id: doc.id, ...doc.data() } as Order);
           });
-          return orders;
+          return ordersData;
       }
       
-      if (firestore) {
-        setIsLoading(true);
-        Promise.all([
+      try {
+        const [productData, ordersData] = await Promise.all([
           getProduct('main-template'),
           getOrders()
-        ]).then(([productData, ordersData]) => {
-          setProduct(productData);
-          setOrders(ordersData);
-          setIsLoading(false);
-        })
+        ]);
+        setProduct(productData);
+        setOrders(ordersData);
+      } catch (error) {
+        console.error("Failed to fetch admin data:", error);
+        setOrders([]);
+      } finally {
+        setIsLoading(false);
       }
+    }
+    
+    fetchData();
 
-  }, [firestore]);
+  }, [firestore, user]);
 
 
-  if (isLoading || !product || !orders) {
+  if (isUserLoading || isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!product || !orders) {
+    return (
+      <div className="container mx-auto py-10 text-center">
+         <h1 className="text-3xl font-bold mb-6 font-headline">Admin Dashboard</h1>
+         <p className="text-destructive">Failed to load data. You may not have permission to view this page.</p>
       </div>
     );
   }
