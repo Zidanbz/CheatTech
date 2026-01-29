@@ -271,7 +271,7 @@ export default function NewProductPage() {
         </Form>
       </div>
        <footer className="text-center text-sm text-muted-foreground mt-8">
-         © 2024 PortofolioKu Dashboard System. Dibuat untuk UMKM & Mahasiswa Indonesia.
+         © 2024 CheatTech Dashboard System. Dibuat untuk UMKM & Mahasiswa Indonesia.
        </footer>
     </div>
   );

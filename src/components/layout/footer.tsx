@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="container py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="col-span-2 md:col-span-1">
-            <h3 className="font-bold text-lg mb-2">Portofoloku</h3>
+            <h3 className="font-bold text-lg mb-2">CheatTech</h3>
             <p className="text-sm text-muted-foreground">Platform penyedia template website portofolio berkualitas untuk talenta digital Indonesia.</p>
           </div>
           <div>
@@ -34,7 +34,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Portofoloku. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} CheatTech. All rights reserved.</p>
         </div>
       </div>
     </footer>

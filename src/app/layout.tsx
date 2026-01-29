@@ -18,7 +18,7 @@ const inter = Inter({
 // Metadata can't be exported from a client component.
 // We can define it here, but it won't be used by Next.js in this file.
 // export const metadata: Metadata = {
-//   title: 'Portofoloku - Website Portofolio Instan',
+//   title: 'CheatTech - Website Portofolio Instan',
 //   description: 'Website Portofolio Mahasiswa, Siap Online dalam 10 Menit.',
 //   icons: {
 //     icon: '/favicon.ico',
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
-        <title>Portofoloku - Website Portofolio Instan</title>
+        <title>CheatTech - Website Portofolio Instan</title>
         <meta name="description" content="Website Portofolio Mahasiswa, Siap Online dalam 10 Menit." />
         <link rel="icon" href="/favicon.ico" />
       </head>

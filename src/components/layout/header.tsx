@@ -17,7 +17,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
-          <span className="font-bold text-lg">Portofoloku</span>
+          <span className="font-bold text-lg">CheatTech</span>
         </Link>
         
         <nav className="hidden md:flex items-center gap-6">
@@ -42,12 +42,12 @@ export default function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left">
-                <SheetHeader className="sr-only">
-                  <SheetTitle>Mobile Menu</SheetTitle>
+                <SheetHeader>
+                  <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col p-4">
                   <Link href="/" className="mb-8 flex items-center space-x-2">
-                    <span className="font-bold">Portofoloku</span>
+                    <span className="font-bold">CheatTech</span>
                   </Link>
                   <nav className="flex flex-col gap-4">
                     {navLinks.map((link) => (

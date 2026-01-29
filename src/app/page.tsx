@@ -26,7 +26,7 @@ const defaultTestimonials = [
    {
     name: 'Jessica Tan',
     role: 'Content Writer, Surabaya',
-    quote: '"Awalnya ragu, tapi setelah coba, ternyata gampang banget pakenya. Gak perlu pusing ngoding, tinggal ganti teks dan gambar. Thanks Portofoloku!"',
+    quote: '"Awalnya ragu, tapi setelah coba, ternyata gampang banget pakenya. Gak perlu pusing ngoding, tinggal ganti teks dan gambar. Thanks CheatTech!"',
     avatar: 'https://i.pravatar.cc/150?u=jessica'
   }
 ];

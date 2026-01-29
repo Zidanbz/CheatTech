@@ -44,7 +44,7 @@ export default function Sidebar() {
       <div className="flex h-14 items-center border-b px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <CodeXml className="h-6 w-6 text-primary" />
-          <span>PortofolioKu</span>
+          <span>CheatTech</span>
         </Link>
       </div>
       <nav className="flex-1 overflow-auto py-4 px-4">
@@ -110,7 +110,7 @@ export default function Sidebar() {
                 <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-semibold">{user?.displayName || 'Admin PortofolioKu'}</p>
+                <p className="text-sm font-semibold">{user?.displayName || 'Admin CheatTech'}</p>
                 <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
          </div>
