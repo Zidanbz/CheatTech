@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Archive,
   FileEdit,
@@ -100,9 +101,11 @@ export default function ProductsPage() {
             Kelola katalog template portofolio digital Anda.
           </p>
         </div>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Tambah Produk
+        <Button asChild>
+          <Link href="/admin/products/new">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Tambah Produk
+          </Link>
         </Button>
       </div>
 
