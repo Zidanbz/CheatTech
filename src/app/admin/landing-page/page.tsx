@@ -53,6 +53,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const formSchema = z.object({
   heroHeadline: z.string().min(10, { message: 'Headline minimal 10 karakter.' }),
   heroSubheadline: z.string().min(20, { message: 'Sub-headline minimal 20 karakter.' }),
+  heroImageUrl: z.string().url({ message: 'URL gambar tidak valid.' }),
   problemHeadline: z.string().min(1, 'Judul harus diisi.'),
   problemText: z.string().min(1, 'Teks harus diisi.'),
   featuresSectionBadge: z.string().min(1, 'Badge harus diisi.'),
@@ -88,6 +89,7 @@ const defaultContent: Omit<LandingPage, 'id'> = {
     'Website Portofolio Mahasiswa, <span class="text-primary">Siap Online</span> dalam 10 Menit',
   heroSubheadline:
     'Tingkatkan personal branding kamu dan pikat HRD dengan website profesional tanpa perlu belajar coding yang rumit.',
+  heroImageUrl: 'https://picsum.photos/seed/hero-image/600/400',
   problemHeadline: 'Kenapa Sulit Dapat Kerja?',
   problemText:
     'Lamar kerja ratusan kali tapi tidak dipanggil? Mungkin CV kamu kurang menarik. Di era digital yang kompetitif ini, sekadar CV PDF tidak cukup. Kamu butuh portofolio online yang hidup untuk menvalidasi skill dan membedakan dirimu dari kandidat lain.',
@@ -312,6 +314,22 @@ export default function LandingPageManagementPage() {
                               <FormControl>
                                 <Textarea placeholder="Tulis sub-headline yang menarik..." className="min-h-[100px]" {...field} />
                               </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="heroImageUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>URL Gambar Hero</FormLabel>
+                              <FormControl>
+                                <Input placeholder="https://images.unsplash.com/..." {...field} />
+                              </FormControl>
+                              <FormDescription>
+                                Masukkan URL gambar yang akan ditampilkan di bagian hero.
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}

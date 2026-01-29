@@ -113,14 +113,18 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex items-center justify-center">
-                <Image
-                  src="https://picsum.photos/seed/hero-image/600/400"
-                  width={550}
-                  height={350}
-                  alt="Product preview"
-                  className="mx-auto overflow-hidden rounded-xl object-cover object-center shadow-2xl"
-                  data-ai-hint="browser mockup"
-                />
+                {isLoadingContent ? (
+                  <Skeleton className="h-[350px] w-[550px] rounded-xl" />
+                ) : (
+                  <Image
+                    src={content?.heroImageUrl || "https://picsum.photos/seed/hero-image/600/400"}
+                    width={550}
+                    height={350}
+                    alt="Product preview"
+                    className="mx-auto overflow-hidden rounded-xl object-cover object-center shadow-2xl"
+                    data-ai-hint="browser mockup"
+                  />
+                )}
               </div>
             </div>
           </div>

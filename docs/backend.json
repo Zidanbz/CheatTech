@@ -182,6 +182,11 @@
           "type": "string",
           "description": "The sub-headline in the hero section."
         },
+        "heroImageUrl": {
+          "type": "string",
+          "description": "URL for the hero image.",
+          "format": "uri"
+        },
         "problemHeadline": {
           "type": "string"
         },

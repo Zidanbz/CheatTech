@@ -45,6 +45,7 @@ export type LandingPage = {
   id: string;
   heroHeadline: string;
   heroSubheadline: string;
+  heroImageUrl: string;
   problemHeadline: string;
   problemText: string;
   featuresSectionBadge: string;
