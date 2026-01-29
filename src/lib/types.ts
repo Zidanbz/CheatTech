@@ -42,3 +42,13 @@ export type Voucher = {
   usageLimit: number;
   minPurchase?: number;
 };
+
+export type Referral = {
+  id: string;
+  referrerName: string;
+  referrerId: string;
+  referredEmail: string;
+  referralDate: Timestamp;
+  status: 'Pending' | 'Completed' | 'Canceled';
+  commission: number;
+};

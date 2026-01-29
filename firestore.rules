@@ -74,5 +74,16 @@ service cloud.firestore {
       allow read, list, create, update: if isSignedIn();
       allow delete: if false;
     }
+
+    /**
+     * @description
+     *  Referrals can only be managed by admins.
+     * @path
+     *  /referrals/{referralId}
+     */
+    match /referrals/{referralId} {
+      allow read, list, create, update: if isSignedIn();
+      allow delete: if false;
+    }
   }
 }

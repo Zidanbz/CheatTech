@@ -187,6 +187,47 @@
         "heroHeadline",
         "heroSubheadline"
       ]
+    },
+    "Referral": {
+      "title": "Referral",
+      "type": "object",
+      "description": "Represents a user referral.",
+      "properties": {
+        "referrerName": {
+          "type": "string",
+          "description": "Name of the person who made the referral."
+        },
+        "referrerId": {
+          "type": "string",
+          "description": "The user ID of the referrer."
+        },
+        "referredEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of the person who was referred."
+        },
+        "referralDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the referral was made."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Completed", "Canceled"],
+          "description": "The status of the referral."
+        },
+        "commission": {
+          "type": "number",
+          "description": "The commission amount earned from this referral."
+        }
+      },
+      "required": [
+        "referrerName",
+        "referrerId",
+        "referredEmail",
+        "referralDate",
+        "status"
+      ]
     }
   },
   "auth": {
@@ -257,6 +298,22 @@
             {
               "name": "voucherId",
               "description": "The unique identifier for the voucher."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/referrals/{referralId}",
+        "definition": {
+          "entityName": "Referral",
+          "schema": {
+            "$ref": "#/backend/entities/Referral"
+          },
+          "description": "Stores user referral data.",
+          "params": [
+            {
+              "name": "referralId",
+              "description": "The unique identifier for the referral."
             }
           ]
         }

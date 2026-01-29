@@ -9,6 +9,7 @@ import {
   Archive,
   LayoutDashboard,
   Ticket,
+  Gift,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ const mainNavItems = [
   { href: '/admin/landing-page', label: 'Landing Page', icon: LayoutDashboard },
   { href: '/admin/orders', label: 'Transaksi', icon: ShoppingCart },
   { href: '/admin/vouchers', label: 'Manajemen Voucher', icon: Ticket },
+  { href: '/admin/referrals', label: 'Manajemen Referral', icon: Gift },
 ];
 
 const systemNavItems = [{ href: '/admin/settings', label: 'Pengaturan', icon: Settings }];
