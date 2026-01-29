@@ -5,58 +5,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Zap, Search, Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { LandingPage } from '@/lib/types';
+import {
+  useDoc,
+  useFirestore,
+  useMemoFirebase,
+  useCollection,
+} from '@/firebase';
+import { doc, collection, query, where } from 'firebase/firestore';
+import type { LandingPage, Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const defaultTestimonials = [
-  {
-    name: 'Sarah Amalia',
-    role: 'Mahasiswa DKV, Bandung',
-    quote: 'Baru lulus kemarin bingung mau apply di banyak portofolio sama HRD. Untung ada simple web, jadi pake template ini. Tampilannya pro banget, HRD langsung interest.',
-    avatar: 'https://i.pravatar.cc/150?u=sarah'
-  },
-  {
-    name: 'Andi Pratama',
-    role: 'Fresh Graduate IT, Jakarta',
-    quote: '"Investasi terbaik 49rb seumur hidup. Template-nya ciamik, loading wush wush, SEO nya juga oke, nama saya muncul di Google."',
-    avatar: 'https://i.pravatar.cc/150?u=andi'
-  },
-   {
-    name: 'Jessica Tan',
-    role: 'Content Writer, Surabaya',
-    quote: '"Awalnya ragu, tapi setelah coba, ternyata gampang banget pakenya. Gak perlu pusing ngoding, tinggal ganti teks dan gambar. Thanks CheatTech!"',
-    avatar: 'https://i.pravatar.cc/150?u=jessica'
-  }
-];
-
-const templates = [
-  {
-    name: "Minimalist Furia",
-    description: "Cocok untuk content writer, jurnalis, dan akademisi.",
-    price: "49.000",
-    image: "https://picsum.photos/seed/template1/400/300",
-    tags: ["Best Seller"],
-    imageHint: "minimalist portfolio",
-  },
-  {
-    name: "Creative Dev",
-    description: "Pilihan tepat untuk developer, desainer UI/UX, dan ilustrator.",
-    price: "49.000",
-    image: "https://picsum.photos/seed/template2/400/300",
-    tags: [],
-    imageHint: "developer portfolio"
-  },
-  {
-    name: "Business Pro",
-    description: "Template handal untuk konsultan, akuntan, dan manajemen.",
-    price: "59.000",
-    image: "https://picsum.photos/seed/template3/400/300",
-    tags: ["New"],
-    imageHint: "business portfolio"
-  }
-]
 
 const featureIcons = [
   <CheckCircle key="check" className="size-8 text-primary" />,
@@ -66,8 +23,22 @@ const featureIcons = [
 
 export default function Home() {
   const firestore = useFirestore();
-  const landingPageRef = useMemoFirebase(() => firestore ? doc(firestore, 'landingPage', 'main') : null, [firestore]);
-  const { data: content, isLoading } = useDoc<LandingPage>(landingPageRef);
+  const landingPageRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'landingPage', 'main') : null),
+    [firestore]
+  );
+  const { data: content, isLoading: isLoadingContent } =
+    useDoc<LandingPage>(landingPageRef);
+
+  const productsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? query(collection(firestore, 'products'), where('active', '==', true))
+        : null,
+    [firestore]
+  );
+  const { data: products, isLoading: isLoadingProducts } =
+    useCollection<Product>(productsQuery);
 
   return (
     <div className="flex flex-col min-h-dvh bg-white">
@@ -77,25 +48,31 @@ export default function Home() {
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-16 items-center">
               <div className="flex flex-col justify-center space-y-6">
-                <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium w-fit">TERBARU V2.4</div>
+                <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium w-fit">
+                  TERBARU V2.4
+                </div>
                 <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl xl:text-6xl/none">
-                  {isLoading ? (
-                      <div className="space-y-2">
-                          <Skeleton className="h-12 w-full" />
-                          <Skeleton className="h-12 w-3/4" />
-                      </div>
+                  {isLoadingContent ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-3/4" />
+                    </div>
                   ) : (
-                      <span dangerouslySetInnerHTML={{ __html: content?.heroHeadline || '' }} />
+                    <span
+                      dangerouslySetInnerHTML={{
+                        __html: content?.heroHeadline || '',
+                      }}
+                    />
                   )}
                 </h1>
                 <div className="max-w-[600px] text-muted-foreground md:text-xl">
-                  {isLoading ? (
-                      <div className="space-y-2">
-                          <Skeleton className="h-6 w-full" />
-                          <Skeleton className="h-6 w-5/6" />
-                      </div>
+                  {isLoadingContent ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-6 w-full" />
+                      <Skeleton className="h-6 w-5/6" />
+                    </div>
                   ) : (
-                      content?.heroSubheadline
+                    content?.heroSubheadline
                   )}
                 </div>
                 <div className="flex flex-col gap-4 sm:flex-row items-center">
@@ -107,23 +84,43 @@ export default function Home() {
                   </Button>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center -space-x-2">
-                       <Image src="https://i.pravatar.cc/40?u=a" width={40} height={40} alt="user" className="rounded-full border-2 border-white"/>
-                       <Image src="https://i.pravatar.cc/40?u=b" width={40} height={40} alt="user" className="rounded-full border-2 border-white"/>
-                       <Image src="https://i.pravatar.cc/40?u=c" width={40} height={40} alt="user" className="rounded-full border-2 border-white"/>
+                      <Image
+                        src="https://i.pravatar.cc/40?u=a"
+                        width={40}
+                        height={40}
+                        alt="user"
+                        className="rounded-full border-2 border-white"
+                      />
+                      <Image
+                        src="https://i.pravatar.cc/40?u=b"
+                        width={40}
+                        height={40}
+                        alt="user"
+                        className="rounded-full border-2 border-white"
+                      />
+                      <Image
+                        src="https://i.pravatar.cc/40?u=c"
+                        width={40}
+                        height={40}
+                        alt="user"
+                        className="rounded-full border-2 border-white"
+                      />
                     </div>
-                    <p className="text-sm text-muted-foreground">Digunakan oleh 500+ mahasiswa</p>
+                    <p className="text-sm text-muted-foreground">
+                      Digunakan oleh 500+ mahasiswa
+                    </p>
                   </div>
                 </div>
               </div>
               <div className="flex items-center justify-center">
-                 <Image
-                    src="https://picsum.photos/seed/hero-image/600/400"
-                    width={550}
-                    height={350}
-                    alt="Product preview"
-                    className="mx-auto overflow-hidden rounded-xl object-cover object-center shadow-2xl"
-                    data-ai-hint="browser mockup"
-                  />
+                <Image
+                  src="https://picsum.photos/seed/hero-image/600/400"
+                  width={550}
+                  height={350}
+                  alt="Product preview"
+                  className="mx-auto overflow-hidden rounded-xl object-cover object-center shadow-2xl"
+                  data-ai-hint="browser mockup"
+                />
               </div>
             </div>
           </div>
@@ -132,18 +129,22 @@ export default function Home() {
         {/* Kenapa Sulit Section */}
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container mx-auto px-4 md:px-6 text-center max-w-3xl">
-             {isLoading ? (
-                <div className='space-y-4'>
-                    <Skeleton className="h-10 w-2/3 mx-auto" />
-                    <Skeleton className="h-6 w-full" />
-                    <Skeleton className="h-6 w-5/6 mx-auto" />
-                </div>
-              ) : (
-                <>
-                  <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-4">{content?.problemHeadline}</h2>
-                  <p className="text-muted-foreground text-lg">{content?.problemText}</p>
-                </>
-              )}
+            {isLoadingContent ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-2/3 mx-auto" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-5/6 mx-auto" />
+              </div>
+            ) : (
+              <>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-4">
+                  {content?.problemHeadline}
+                </h2>
+                <p className="text-muted-foreground text-lg">
+                  {content?.problemText}
+                </p>
+              </>
+            )}
           </div>
         </section>
 
@@ -151,37 +152,57 @@ export default function Home() {
         <section id="keuntungan" className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
-               {isLoading ? (
-                  <div className='space-y-4 w-full max-w-3xl'>
-                    <Skeleton className="h-8 w-32 mx-auto" />
-                    <Skeleton className="h-12 w-2/3 mx-auto" />
-                    <Skeleton className="h-6 w-full" />
+              {isLoadingContent ? (
+                <div className="space-y-4 w-full max-w-3xl">
+                  <Skeleton className="h-8 w-32 mx-auto" />
+                  <Skeleton className="h-12 w-2/3 mx-auto" />
+                  <Skeleton className="h-6 w-full" />
+                </div>
+              ) : (
+                <>
+                  <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium">
+                    {content?.featuresSectionBadge}
                   </div>
-                ) : (
-                  <>
-                    <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium">{content?.featuresSectionBadge}</div>
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">{content?.featuresSectionHeadline}</h2>
-                    <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                     {content?.featuresSectionSubheadline}
-                    </p>
-                  </>
-                )}
+                  <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">
+                    {content?.featuresSectionHeadline}
+                  </h2>
+                  <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                    {content?.featuresSectionSubheadline}
+                  </p>
+                </>
+              )}
             </div>
             <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3">
-              {isLoading ? Array(3).fill(0).map((_, i) => (
-                <div key={i} className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md">
-                  <Skeleton className="h-14 w-14 rounded-full mx-auto" />
-                  <Skeleton className="h-7 w-3/4 mx-auto" />
-                  <Skeleton className="h-5 w-full" />
-                  <Skeleton className="h-5 w-5/6 mx-auto" />
-                </div>
-              )) : content?.features.map((feature, index) => (
-                <div key={index} className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md">
-                  <div className="flex justify-center"><div className="bg-primary/10 rounded-full p-3 w-fit">{featureIcons[index]}</div></div>
-                  <h3 className="text-xl font-bold">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
-                </div>
-              ))}
+              {isLoadingContent
+                ? Array(3)
+                    .fill(0)
+                    .map((_, i) => (
+                      <div
+                        key={i}
+                        className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md"
+                      >
+                        <Skeleton className="h-14 w-14 rounded-full mx-auto" />
+                        <Skeleton className="h-7 w-3/4 mx-auto" />
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-5/6 mx-auto" />
+                      </div>
+                    ))
+                : content?.features.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md"
+                    >
+                      <div className="flex justify-center">
+                        <div className="bg-primary/10 rounded-full p-3 w-fit">
+                          {featureIcons[index]}
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-bold">{feature.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {feature.description}
+                      </p>
+                    </div>
+                  ))}
             </div>
           </div>
         </section>
@@ -191,65 +212,121 @@ export default function Home() {
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex justify-between items-center mb-8">
               <div>
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Pilihan Template Terbaik</h2>
-                <p className="text-muted-foreground">Pilih desain yang paling cocok dengan kepribadian dan profesi impianmu.</p>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
+                  Pilihan Template Terbaik
+                </h2>
+                <p className="text-muted-foreground">
+                  Pilih desain yang paling cocok dengan kepribadian dan profesi
+                  impianmu.
+                </p>
               </div>
-              <Button variant="link" asChild><Link href="/produk">Lihat Semua →</Link></Button>
+              <Button variant="link" asChild>
+                <Link href="/produk">Lihat Semua →</Link>
+              </Button>
             </div>
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {templates.map(template => (
-                <Card key={template.name}>
-                  <CardContent className="p-0">
-                    <Image src={template.image} alt={template.name} width={400} height={300} className="rounded-t-lg w-full" data-ai-hint={template.imageHint} />
-                    <div className="p-4">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-lg">{template.name}</h3>
-                        {template.tags.map(tag => (
-                          <div key={tag} className={`text-xs font-semibold px-2 py-1 rounded-full ${tag === 'Best Seller' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>{tag}</div>
-                        ))}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1 mb-4">{template.description}</p>
-                      <div className="flex justify-between items-center">
-                        <p className="font-bold">Rp {template.price}</p>
-                        <Button variant="outline" size="sm" asChild><Link href="/produk">Detail</Link></Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {isLoadingProducts
+                ? Array.from({ length: 3 }).map((_, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-0">
+                        <Skeleton className="h-[300px] w-full rounded-t-lg" />
+                        <div className="p-4 space-y-2">
+                          <Skeleton className="h-6 w-3/4" />
+                          <Skeleton className="h-4 w-full" />
+                          <div className="flex justify-between items-center pt-2">
+                            <Skeleton className="h-8 w-1/4" />
+                            <Skeleton className="h-8 w-1/3" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                : products?.map((product) => (
+                    <Card key={product.id}>
+                      <CardContent className="p-0">
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          width={400}
+                          height={300}
+                          className="rounded-t-lg w-full aspect-[4/3] object-cover"
+                          data-ai-hint="portfolio website"
+                        />
+                        <div className="p-4">
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-bold text-lg">
+                              {product.name}
+                            </h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1 mb-4 h-10 line-clamp-2">
+                            {product.subheadline}
+                          </p>
+                          <div className="flex justify-between items-center">
+                            <p className="font-bold">
+                              Rp {product.price.toLocaleString('id-ID')}
+                            </p>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href="/produk">Detail</Link>
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
             </div>
           </div>
         </section>
 
         {/* 3 Steps Section */}
-        <section id="cara-kerja" className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
+        <section
+          id="cara-kerja"
+          className="w-full py-12 md:py-24 lg:py-32 bg-slate-50"
+        >
           <div className="container text-center">
-            {isLoading ? (
-               <div className='space-y-4 max-w-2xl mx-auto'>
-                  <Skeleton className="h-10 w-2/3 mx-auto" />
-                  <Skeleton className="h-6 w-full" />
+            {isLoadingContent ? (
+              <div className="space-y-4 max-w-2xl mx-auto">
+                <Skeleton className="h-10 w-2/3 mx-auto" />
+                <Skeleton className="h-6 w-full" />
               </div>
             ) : (
               <>
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">{content?.stepsSectionHeadline}</h2>
-                <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-lg">{content?.stepsSectionSubheadline}</p>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
+                  {content?.stepsSectionHeadline}
+                </h2>
+                <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-lg">
+                  {content?.stepsSectionSubheadline}
+                </p>
               </>
             )}
             <div className="grid md:grid-cols-3 gap-8 mt-12 max-w-4xl mx-auto">
-              {isLoading ? Array(3).fill(0).map((_, i) => (
-                <div key={i} className="flex flex-col items-center text-center space-y-3">
-                  <Skeleton className="w-12 h-12 rounded-full" />
-                  <Skeleton className="h-7 w-1/2" />
-                  <Skeleton className="h-5 w-full" />
-                  <Skeleton className="h-5 w-3/4" />
-                </div>
-              )) : content?.steps.map((step, index) => (
-                <div key={index} className="flex flex-col items-center text-center">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-xl mb-4">{index + 1}</div>
-                    <h3 className="font-bold text-xl mb-2">{step.title}</h3>
-                    <p className="text-muted-foreground text-sm">{step.description}</p>
-                </div>
-              ))}
+              {isLoadingContent
+                ? Array(3)
+                    .fill(0)
+                    .map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex flex-col items-center text-center space-y-3"
+                      >
+                        <Skeleton className="w-12 h-12 rounded-full" />
+                        <Skeleton className="h-7 w-1/2" />
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-3/4" />
+                      </div>
+                    ))
+                : content?.steps.map((step, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col items-center text-center"
+                    >
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-xl mb-4">
+                        {index + 1}
+                      </div>
+                      <h3 className="font-bold text-xl mb-2">{step.title}</h3>
+                      <p className="text-muted-foreground text-sm">
+                        {step.description}
+                      </p>
+                    </div>
+                  ))}
             </div>
           </div>
         </section>
@@ -262,20 +339,39 @@ export default function Home() {
                 <div className="bg-primary text-primary-foreground p-6">
                   <h3 className="font-semibold">Single Template</h3>
                   <p className="text-4xl font-bold mt-2">Rp 49rb</p>
-                  <p className="text-sm opacity-80">Harga per template, sekali bayar.</p>
+                  <p className="text-sm opacity-80">
+                    Harga per template, sekali bayar.
+                  </p>
                 </div>
                 <div className="p-6">
                   <ul className="grid gap-3 text-left text-sm mb-6">
-                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Akses File 1 Template Pilihan</li>
-                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Update Gratis Seumur Hidup</li>
-                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Dokumentasi & Panduan Install</li>
-                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Akses Source Code (React+Next.js)</li>
-                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Siap Deploy (Mobile Friendly)</li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Akses File 1 Template Pilihan
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Update Gratis Seumur Hidup
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Dokumentasi & Panduan Install
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Akses Source Code (React+Next.js)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Siap Deploy (Mobile Friendly)
+                    </li>
                   </ul>
                   <Button asChild size="lg" className="w-full">
                     <Link href="/checkout">Pilih Template</Link>
                   </Button>
-                  <p className="text-xs text-muted-foreground mt-4">Pilih template lainnya di atas untuk membeli.</p>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Pilih template lainnya di atas untuk membeli.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -285,45 +381,66 @@ export default function Home() {
         {/* Testimonials Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
           <div className="container mx-auto px-4 md:px-6">
-            {isLoading ? (
+            {isLoadingContent ? (
               <Skeleton className="h-10 w-1/3 mx-auto mb-12" />
             ) : (
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl text-center mb-12">{content?.testimonialsSectionHeadline}</h2>
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl text-center mb-12">
+                {content?.testimonialsSectionHeadline}
+              </h2>
             )}
             <div className="grid gap-8 md:grid-cols-3">
-              {isLoading ? Array(3).fill(0).map((_, i) => (
-                <Card key={i}>
-                  <CardContent className="p-6 space-y-4">
-                     <Skeleton className="h-5 w-1/2" />
-                     <Skeleton className="h-5 w-full" />
-                     <Skeleton className="h-5 w-full" />
-                     <Skeleton className="h-5 w-2/3" />
-                     <div className="flex items-center gap-3 pt-2">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-20" />
-                      </div>
-                     </div>
-                  </CardContent>
-                </Card>
-              )) : (content?.testimonials || defaultTestimonials).map((testimonial, index) => (
-                <Card key={index}>
-                  <CardContent className="p-6">
-                    <div className="flex mb-2">
-                      {[...Array(5)].map((_, i) => <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />)}
-                    </div>
-                    <p className="text-muted-foreground mb-4">"{testimonial.quote}"</p>
-                    <div className="flex items-center gap-3">
-                      <Image src={testimonial.avatar} width={40} height={40} alt={testimonial.name} className="rounded-full" />
-                      <div>
-                        <p className="font-semibold">{testimonial.name}</p>
-                        <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {isLoadingContent
+                ? Array(3)
+                    .fill(0)
+                    .map((_, i) => (
+                      <Card key={i}>
+                        <CardContent className="p-6 space-y-4">
+                          <Skeleton className="h-5 w-1/2" />
+                          <Skeleton className="h-5 w-full" />
+                          <Skeleton className="h-5 w-full" />
+                          <Skeleton className="h-5 w-2/3" />
+                          <div className="flex items-center gap-3 pt-2">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-24" />
+                              <Skeleton className="h-4 w-20" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                : content?.testimonials?.map((testimonial, index) => (
+                    <Card key={index}>
+                      <CardContent className="p-6">
+                        <div className="flex mb-2">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className="h-5 w-5 text-yellow-400 fill-yellow-400"
+                            />
+                          ))}
+                        </div>
+                        <p className="text-muted-foreground mb-4">
+                          "{testimonial.quote}"
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <Image
+                            src={testimonial.avatar}
+                            width={40}
+                            height={40}
+                            alt={testimonial.name}
+                            className="rounded-full"
+                          />
+                          <div>
+                            <p className="font-semibold">{testimonial.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {testimonial.role}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
             </div>
           </div>
         </section>
