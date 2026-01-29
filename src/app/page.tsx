@@ -41,7 +41,7 @@ export default function Home() {
     useCollection<Product>(productsQuery);
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col min-h-dvh bg-background">
       <main className="flex-1">
         {/* Hero Section */}
         <section className="w-full py-20 md:py-32 lg:py-40 bg-accent">
@@ -153,7 +153,7 @@ export default function Home() {
         </section>
 
         {/* Features Section */}
-        <section id="keuntungan" className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
+        <section id="keuntungan" className="w-full py-12 md:py-24 lg:py-32 bg-secondary">
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
               {isLoadingContent ? (
@@ -183,7 +183,7 @@ export default function Home() {
                     .map((_, i) => (
                       <div
                         key={i}
-                        className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md"
+                        className="grid gap-4 text-center p-6 rounded-lg bg-background shadow-md"
                       >
                         <Skeleton className="h-14 w-14 rounded-full mx-auto" />
                         <Skeleton className="h-7 w-3/4 mx-auto" />
@@ -194,7 +194,7 @@ export default function Home() {
                 : content?.features.map((feature, index) => (
                     <div
                       key={index}
-                      className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md"
+                      className="grid gap-4 text-center p-6 rounded-lg bg-background shadow-md"
                     >
                       <div className="flex justify-center">
                         <div className="bg-primary/10 rounded-full p-3 w-fit">
@@ -284,7 +284,7 @@ export default function Home() {
         {/* 3 Steps Section */}
         <section
           id="cara-kerja"
-          className="w-full py-12 md:py-24 lg:py-32 bg-slate-50"
+          className="w-full py-12 md:py-24 lg:py-32 bg-secondary"
         >
           <div className="container text-center">
             {isLoadingContent ? (
@@ -383,7 +383,7 @@ export default function Home() {
         </section>
 
         {/* Testimonials Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-secondary">
           <div className="container mx-auto px-4 md:px-6">
             {isLoadingContent ? (
               <Skeleton className="h-10 w-1/3 mx-auto mb-12" />

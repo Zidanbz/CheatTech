@@ -34,7 +34,7 @@ export default function RootLayout({
   const isAdminPage = pathname.startsWith('/admin');
 
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id">
       <head>
         <title>CheatTech - Website Portofolio Instan</title>
         <meta name="description" content="Website Portofolio Mahasiswa, Siap Online dalam 10 Menit." />
@@ -48,7 +48,7 @@ export default function RootLayout({
       >
         <FirebaseClientProvider>
           {isAdminPage ? (
-             <div className="bg-gray-50 dark:bg-background">{children}</div>
+             <div className="bg-background">{children}</div>
           ) : (
             <div className="relative flex min-h-dvh flex-col bg-background">
               <Header />
