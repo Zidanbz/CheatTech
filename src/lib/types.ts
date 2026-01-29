@@ -35,7 +35,10 @@ export type Voucher = {
   code: string;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
+  startDate: Timestamp;
   expiryDate: Timestamp;
   isActive: boolean;
   usageCount: number;
+  usageLimit: number;
+  minPurchase?: number;
 };

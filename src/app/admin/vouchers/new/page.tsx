@@ -4,13 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription
-} from '@/components/ui/card';
-import {
   Form,
   FormControl,
   FormDescription,
@@ -26,20 +19,26 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { collection, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
-import { ArrowLeft, Loader2, CalendarIcon, Percent, Tag } from 'lucide-react';
-import Link from 'next/link';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import React, { useTransition } from 'react';
+import { Loader2, Calendar as CalendarIcon, ShieldCheck } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { DateRange } from 'react-day-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formSchema = z.object({
-  code: z.string().min(5, { message: 'Kode minimal 5 karakter.' }).regex(/^[A-Z0-9]+$/, 'Kode hanya boleh berisi huruf kapital dan angka.'),
+  code: z.string().min(5, 'Kode minimal 5 karakter.').regex(/^[A-Z0-9]+$/, 'Kode hanya boleh berisi huruf kapital dan angka.'),
   discountType: z.enum(['percentage', 'fixed'], { required_error: 'Pilih tipe diskon.' }),
-  discountValue: z.coerce.number().positive({ message: 'Nilai diskon harus positif.' }),
-  expiryDate: z.date({ required_error: 'Tanggal kedaluwarsa harus diisi.' }),
+  discountValue: z.coerce.number().min(0, 'Nilai diskon tidak boleh negatif.'),
+  usageLimit: z.coerce.number().int().min(0, 'Limit penggunaan tidak boleh negatif.'),
+  minPurchase: z.coerce.number().nonnegative('Minimal pembelian tidak boleh negatif.').optional().or(z.literal('')),
+  validityPeriod: z.object({
+    from: z.date({ required_error: 'Tanggal mulai harus diisi.' }),
+    to: z.date({ required_error: 'Tanggal berakhir harus diisi.' }),
+  }),
   isActive: z.boolean().default(true),
 }).refine(data => !(data.discountType === 'percentage' && data.discountValue > 100), {
   message: 'Diskon persentase tidak boleh lebih dari 100.',
@@ -57,7 +56,9 @@ export default function NewVoucherPage() {
     defaultValues: {
       code: '',
       discountType: 'percentage',
-      discountValue: 10,
+      discountValue: 0,
+      usageLimit: 100,
+      minPurchase: 0,
       isActive: true,
     },
   });
@@ -68,18 +69,21 @@ export default function NewVoucherPage() {
     for (let i = 0; i < 8; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    form.setValue('code', result);
+    form.setValue('code', result.toUpperCase());
   }
   
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!firestore) return;
+    if (!firestore || !values.validityPeriod.from || !values.validityPeriod.to) return;
 
     startTransition(async () => {
       try {
+        const { validityPeriod, ...rest } = values;
         const newVoucher = {
-          ...values,
-          expiryDate: Timestamp.fromDate(values.expiryDate),
-          usageCount: 0,
+            ...rest,
+            minPurchase: Number(values.minPurchase) || 0,
+            startDate: Timestamp.fromDate(validityPeriod.from),
+            expiryDate: Timestamp.fromDate(validityPeriod.to),
+            usageCount: 0,
         };
 
         await addDocumentNonBlocking(collection(firestore, 'vouchers'), newVoucher);
@@ -103,136 +107,158 @@ export default function NewVoucherPage() {
   const discountType = form.watch('discountType');
 
   return (
-    <div className="space-y-6 pb-8">
-       <Link href="/admin/vouchers" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-         <ArrowLeft className="h-4 w-4" />
-         Kembali ke Manajemen Voucher
-       </Link>
-
-      <div className='max-w-2xl'>
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight">Buat Voucher Baru</h1>
-          <p className="text-muted-foreground mt-1">
-            Konfigurasi detail kode diskon yang ingin Anda tawarkan.
-          </p>
+    <div className="flex justify-center items-start md:items-center py-8 px-4 min-h-full">
+      <div className="w-full max-w-3xl bg-card text-card-foreground rounded-xl shadow-lg border">
+        <div className="p-6 sm:p-8">
+            <div className='flex justify-between items-start'>
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Tambah Voucher Baru</h1>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                        Buat kode promo baru untuk template portofolio Anda.
+                    </p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => router.back()} className='-mt-2 -mr-2'>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </Button>
+            </div>
         </div>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <Card>
-              <CardContent className="p-6 space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="p-6 sm:p-8 pt-0 space-y-6">
+                <div className="grid sm:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="code"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Kode Voucher</FormLabel>
+                                <FormControl>
+                                <Input placeholder="PROMOSERU" {...field} />
+                                </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="discountType"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Tipe Potongan</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih tipe diskon" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="percentage">Persentase (%)</SelectItem>
+                                        <SelectItem value="fixed">Potongan Harga (Rp)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="discountValue"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nilai Potongan</FormLabel>
+                            <FormControl>
+                                <div className="relative">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground text-sm">
+                                        {discountType === 'fixed' ? 'Rp' : '%'}
+                                    </span>
+                                    <Input type="number" className="pl-8" {...field} />
+                                </div>
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="usageLimit"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Limit Penggunaan</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="100" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
                 <FormField
-                  control={form.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Kode Voucher</FormLabel>
-                      <div className="flex gap-2">
+                    control={form.control}
+                    name="minPurchase"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Minimal Pembelian <span className='text-muted-foreground'>(Opsional)</span></FormLabel>
                         <FormControl>
-                          <Input placeholder="Contoh: DISKONBARU" {...field} />
-                        </FormControl>
-                        <Button type="button" variant="outline" onClick={generateRandomCode}>Generate</Button>
-                      </div>
-                      <FormDescription>Kode unik yang akan digunakan pelanggan (huruf kapital dan angka).</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="discountType"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Tipe Diskon</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex flex-col space-y-1"
-                        >
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="percentage" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Persentase</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="fixed" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Potongan Harga Tetap</FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="discountValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nilai Diskon</FormLabel>
-                       <FormControl>
-                          <div className="relative">
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                {discountType === 'fixed' ? (
-                                    <span className="text-muted-foreground sm:text-sm">Rp</span>
-                                ) : (
-                                    <Percent className="h-4 w-4 text-muted-foreground" />
-                                )}
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground text-sm">Rp</span>
+                                <Input type="number" className="pl-8" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : Number(e.target.value))}/>
                             </div>
-                            <Input type="number" className={cn(discountType === 'fixed' ? 'pl-8' : 'pl-9')} {...field} />
-                            {discountType === 'percentage' && (
-                               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                <span className="text-gray-500 sm:text-sm">%</span>
-                              </div>
-                            )}
-                          </div>
                         </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
-
+                
                 <FormField
                   control={form.control}
-                  name="expiryDate"
+                  name="validityPeriod"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Tanggal Kedaluwarsa</FormLabel>
+                      <FormLabel>Masa Berlaku</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
+                              id="date"
                               variant={"outline"}
                               className={cn(
-                                "w-[240px] pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                "justify-start text-left font-normal",
+                                !field.value?.from && "text-muted-foreground"
                               )}
                             >
-                              {field.value ? (
-                                format(field.value, "PPP")
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value?.from ? (
+                                field.value.to ? (
+                                  <>
+                                    {format(field.value.from, "d LLL yyyy", { locale: id })} -{" "}
+                                    {format(field.value.to, "d LLL yyyy", { locale: id })}
+                                  </>
+                                ) : (
+                                  format(field.value.from, "d LLL yyyy", { locale: id })
+                                )
                               ) : (
-                                <span>Pilih tanggal</span>
+                                <span>Pilih rentang tanggal</span>
                               )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
-                            mode="single"
+                            initialFocus
+                            mode="range"
+                            defaultMonth={field.value?.from}
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
+                            numberOfMonths={2}
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                           />
                         </PopoverContent>
                       </Popover>
+                      <FormDescription>Pilih tanggal mulai dan berakhir voucher ini berlaku.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -242,12 +268,17 @@ export default function NewVoucherPage() {
                   control={form.control}
                   name="isActive"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel>Aktifkan Voucher</FormLabel>
-                        <FormDescription>
-                          Jika aktif, voucher bisa langsung digunakan pelanggan.
-                        </FormDescription>
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border bg-blue-50/50 dark:bg-blue-900/20 p-4">
+                      <div className="flex items-center gap-4">
+                        <div className='p-2 bg-background rounded-full border'>
+                           <ShieldCheck className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="space-y-0.5">
+                            <FormLabel>Status Aktif</FormLabel>
+                            <FormDescription>
+                            Voucher dapat digunakan segera setelah disimpan.
+                            </FormDescription>
+                        </div>
                       </div>
                       <FormControl>
                         <Switch
@@ -259,15 +290,14 @@ export default function NewVoucherPage() {
                   )}
                 />
 
-              </CardContent>
-               <div className="p-6 pt-0 flex justify-end gap-2">
-                  <Button variant="outline" type="button" onClick={() => router.back()}>Batal</Button>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Simpan Voucher
-                  </Button>
-              </div>
-            </Card>
+            </div>
+            <div className="p-6 sm:p-8 pt-0 flex justify-end gap-2 border-t mt-6">
+                <Button variant="outline" type="button" onClick={() => router.back()}>Batal</Button>
+                <Button type="submit" disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Voucher
+                </Button>
+            </div>
           </form>
         </Form>
       </div>

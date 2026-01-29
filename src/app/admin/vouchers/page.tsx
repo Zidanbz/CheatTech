@@ -8,7 +8,6 @@ import {
   Loader2,
   Ticket,
   Percent,
-  Tag,
   Trash2,
   FileEdit,
 } from 'lucide-react';
@@ -16,7 +15,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +34,7 @@ import { collection, doc } from 'firebase/firestore';
 import type { Voucher } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { id as indonesiaLocale } from 'date-fns/locale';
 
 export default function VouchersPage() {
   const firestore = useFirestore();
@@ -77,7 +76,10 @@ export default function VouchersPage() {
 
   const stats = useMemo(() => {
     const total = vouchers?.length || 0;
-    const active = vouchers?.filter((v) => v.isActive).length || 0;
+    const active = vouchers?.filter((v) => {
+        const now = new Date();
+        return v.isActive && v.expiryDate.toDate() > now && v.startDate.toDate() < now;
+    }).length || 0;
     return { total, active };
   }, [vouchers]);
 
@@ -129,9 +131,9 @@ export default function VouchersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Kode Voucher</TableHead>
-                <TableHead>Tipe Diskon</TableHead>
-                <TableHead>Nilai</TableHead>
-                <TableHead>Tanggal Kedaluwarsa</TableHead>
+                <TableHead>Diskon</TableHead>
+                <TableHead>Masa Berlaku</TableHead>
+                <TableHead>Penggunaan</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Aksi</TableHead>
               </TableRow>
@@ -149,14 +151,19 @@ export default function VouchersPage() {
                     <TableCell className="font-medium">
                       <Badge variant="secondary">{voucher.code}</Badge>
                     </TableCell>
-                    <TableCell className="capitalize">{voucher.discountType}</TableCell>
                     <TableCell>
+                      <div className='font-medium'>
                       {voucher.discountType === 'percentage'
                         ? `${voucher.discountValue}%`
                         : `Rp ${voucher.discountValue.toLocaleString('id-ID')}`}
+                      </div>
+                      <div className='text-xs text-muted-foreground capitalize'>{voucher.discountType}</div>
                     </TableCell>
                     <TableCell>
-                      {format(voucher.expiryDate.toDate(), 'dd MMM yyyy')}
+                      {format(voucher.startDate.toDate(), 'd MMM yyyy', {locale: indonesiaLocale})} - {format(voucher.expiryDate.toDate(), 'd MMM yyyy', {locale: indonesiaLocale})}
+                    </TableCell>
+                    <TableCell>
+                      {voucher.usageCount} / {voucher.usageLimit}
                     </TableCell>
                     <TableCell>
                       <Switch

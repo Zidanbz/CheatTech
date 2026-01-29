@@ -21,6 +21,11 @@
           "type": "number",
           "description": "The value of the discount (either percentage or fixed amount)."
         },
+        "startDate": {
+          "type": "string",
+          "description": "The start date of the voucher's validity.",
+          "format": "date-time"
+        },
         "expiryDate": {
           "type": "string",
           "description": "The expiration date of the voucher.",
@@ -33,14 +38,24 @@
         "usageCount": {
           "type": "number",
           "description": "How many times the voucher has been used."
+        },
+        "usageLimit": {
+          "type": "number",
+          "description": "The maximum number of times the voucher can be used."
+        },
+        "minPurchase": {
+          "type": "number",
+          "description": "The minimum purchase amount to be eligible for the voucher."
         }
       },
       "required": [
         "code",
         "discountType",
         "discountValue",
+        "startDate",
         "expiryDate",
-        "isActive"
+        "isActive",
+        "usageLimit"
       ]
     },
     "Order": {
