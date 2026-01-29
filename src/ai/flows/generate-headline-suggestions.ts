@@ -85,6 +85,11 @@ const generateHeadlineSuggestionsFlow = ai.defineFlow(
     name: 'generateHeadlineSuggestionsFlow',
     inputSchema: GenerateHeadlineSuggestionsInputSchema,
     outputSchema: GenerateHeadlineSuggestionsOutputSchema,
+    rateLimit: {
+      kind: 'fixed-window',
+      limit: 5,
+      window: '1m',
+    },
   },
   async input => {
     const {output} = await prompt(input);
