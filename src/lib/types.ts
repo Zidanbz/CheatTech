@@ -23,3 +23,9 @@ export type Order = {
   userId: string;
   status: 'Completed' | 'Pending' | 'Processed';
 };
+
+export type LandingPage = {
+  id: string;
+  heroHeadline: string;
+  heroSubheadline: string;
+};

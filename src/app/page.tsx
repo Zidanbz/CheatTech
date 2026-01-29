@@ -5,6 +5,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Zap, Search, Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { LandingPage } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const testimonials = [
   {
@@ -55,6 +59,13 @@ const templates = [
 ]
 
 export default function Home() {
+  const firestore = useFirestore();
+  const landingPageRef = useMemoFirebase(() => firestore ? doc(firestore, 'landingPage', 'main') : null, [firestore]);
+  const { data: content, isLoading } = useDoc<Omit<LandingPage, 'id'>>(landingPageRef);
+
+  const headline = content?.heroHeadline || 'Website Portofolio Mahasiswa, <span class="text-primary">Siap Online</span> dalam 10 Menit';
+  const subheadline = content?.heroSubheadline || 'Tingkatkan personal branding kamu dan pikat HRD dengan website profesional tanpa perlu belajar coding yang rumit.';
+
 
   return (
     <div className="flex flex-col min-h-dvh bg-white">
@@ -66,10 +77,24 @@ export default function Home() {
               <div className="flex flex-col justify-center space-y-6">
                 <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium w-fit">TERBARU V2.4</div>
                 <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl xl:text-6xl/none">
-                  Website Portofolio Mahasiswa, <span className="text-primary">Siap Online</span> dalam 10 Menit
+                  {isLoading ? (
+                      <div className="space-y-2">
+                          <Skeleton className="h-12 w-full" />
+                          <Skeleton className="h-12 w-3/4" />
+                      </div>
+                  ) : (
+                      <span dangerouslySetInnerHTML={{ __html: headline }} />
+                  )}
                 </h1>
                 <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                  Tingkatkan personal branding kamu dan pikat HRD dengan website profesional tanpa perlu belajar coding yang rumit.
+                  {isLoading ? (
+                      <div className="space-y-2">
+                          <Skeleton className="h-6 w-full" />
+                          <Skeleton className="h-6 w-5/6" />
+                      </div>
+                  ) : (
+                      subheadline
+                  )}
                 </p>
                 <div className="flex flex-col gap-4 sm:flex-row items-center">
                   <Button asChild size="lg">

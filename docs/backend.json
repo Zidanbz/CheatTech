@@ -110,6 +110,25 @@
         "features",
         "active"
       ]
+    },
+    "LandingPage": {
+      "title": "Landing Page Content",
+      "type": "object",
+      "description": "Editable content for the main landing page.",
+      "properties": {
+        "heroHeadline": {
+          "type": "string",
+          "description": "The main headline in the hero section."
+        },
+        "heroSubheadline": {
+          "type": "string",
+          "description": "The sub-headline in the hero section."
+        }
+      },
+      "required": [
+        "heroHeadline",
+        "heroSubheadline"
+      ]
     }
   },
   "auth": {
@@ -151,8 +170,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/landingPage/{pageId}",
+        "definition": {
+          "entityName": "LandingPage",
+          "schema": {
+            "$ref": "#/backend/entities/LandingPage"
+          },
+          "description": "Stores content for landing pages. Typically just one document with id 'main'.",
+          "params": [
+            {
+              "name": "pageId",
+              "description": "The unique identifier for the page content, e.g., 'main'."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to address the reported Firestore error and support the application's features. The main collections are `products` and `orders`. The `orders` collection stores order information, with each order document referencing a `product` by `productId`. This flat structure simplifies security rules and queries. Products are publicly readable and writable for this prototype. Orders are listable by any signed-in user, and can only be created by the authenticated user who owns them."
+    "reasoning": "The Firestore structure is designed to address the reported Firestore error and support the application's features. The main collections are `products`, `orders`, and `landingPage`. The `orders` collection stores order information, with each order document referencing a `product` by `productId`. The `landingPage` collection holds editable content for the public-facing site. This flat structure simplifies security rules and queries. Products and landing page content are publicly readable and admin-writable. Orders are listable by admins, and can only be created by the authenticated user who owns them."
   }
 }

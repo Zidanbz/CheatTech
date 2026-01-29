@@ -9,6 +9,7 @@ import {
   LogOut,
   CodeXml,
   Archive,
+  LayoutDashboard,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -19,6 +20,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 const mainNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutGrid },
   { href: '/admin/products', label: 'Manajemen Produk', icon: Archive },
+  { href: '/admin/landing-page', label: 'Landing Page', icon: LayoutDashboard },
   { href: '/admin/orders', label: 'Transaksi', icon: ShoppingCart },
   { href: '/admin/customers', label: 'Pelanggan', icon: Users2 },
 ];

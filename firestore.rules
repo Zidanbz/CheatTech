@@ -50,5 +50,18 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+
+    /**
+     * @description
+     *  Content for the landing page. Publicly readable, but only writable by admins.
+     * @path
+     *  /landingPage/{pageId}
+     */
+    match /landingPage/{pageId} {
+      allow get: if true;
+      allow list: if true;
+      allow create, update: if isSignedIn();
+      allow delete: if false;
+    }
   }
 }
