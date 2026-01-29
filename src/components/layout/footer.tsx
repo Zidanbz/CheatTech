@@ -1,19 +1,41 @@
-import { Code2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="border-t">
-      <div className="container flex flex-col items-center justify-between gap-4 py-10 md:h-24 md:flex-row md:py-0">
-        <div className="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
-          <Code2 className="h-6 w-6 text-primary" />
-          <p className="text-center text-sm leading-loose md:text-left">
-            Dibangun dengan cinta oleh tim CheatTech.
-          </p>
+    <footer className="border-t bg-gray-50">
+      <div className="container py-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="col-span-2 md:col-span-1">
+            <h3 className="font-bold text-lg mb-2">Portofoloku</h3>
+            <p className="text-sm text-muted-foreground">Platform penyedia template website portofolio berkualitas untuk talenta digital Indonesia.</p>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-3">Produk</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="#" className="text-muted-foreground hover:text-primary">Semua Template</Link></li>
+              <li><Link href="#" className="text-muted-foreground hover:text-primary">Paket Bundle</Link></li>
+              <li><Link href="#" className="text-muted-foreground hover:text-primary">Jasa Setup</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-3">Support</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="#" className="text-muted-foreground hover:text-primary">Panduan Instalasi</Link></li>
+              <li><Link href="#" className="text-muted-foreground hover:text-primary">FAQ</Link></li>
+              <li><Link href="#" className="text-muted-foreground hover:text-primary">Hubungi Kami</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-3">Legal</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="#" className="text-muted-foreground hover:text-primary">Ketentuan Layanan</Link></li>
+              <li><Link href="#" className="text-muted-foreground hover:text-primary">Kebijakan Privasi</Link></li>
+            </ul>
+          </div>
         </div>
-        <p className="text-center text-sm text-foreground/60 md:text-left">
-          © {new Date().getFullYear()} CheatTech. All rights reserved.
-        </p>
+        <div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
+          <p>© {new Date().getFullYear()} Portofoloku. All rights reserved.</p>
+        </div>
       </div>
     </footer>
   );
