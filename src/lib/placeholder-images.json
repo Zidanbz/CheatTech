@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "product-template-preview",
+      "description": "A preview of the professional portfolio website template.",
+      "imageUrl": "https://images.unsplash.com/photo-1530435460869-d13625c69bbf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHx3ZWJzaXRlJTIwdGVtcGxhdGV8ZW58MHx8fHwxNzY5Njg1MDUwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "website template"
+    }
+  ]
 }
