@@ -10,7 +10,7 @@ import { doc } from 'firebase/firestore';
 import type { LandingPage } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const testimonials = [
+const defaultTestimonials = [
   {
     name: 'Sarah Amalia',
     role: 'Mahasiswa DKV, Bandung',
@@ -58,14 +58,16 @@ const templates = [
   }
 ]
 
+const featureIcons = [
+  <CheckCircle key="check" className="size-8 text-primary" />,
+  <Zap key="zap" className="size-8 text-primary" />,
+  <Search key="search" className="size-8 text-primary" />,
+];
+
 export default function Home() {
   const firestore = useFirestore();
   const landingPageRef = useMemoFirebase(() => firestore ? doc(firestore, 'landingPage', 'main') : null, [firestore]);
-  const { data: content, isLoading } = useDoc<Omit<LandingPage, 'id'>>(landingPageRef);
-
-  const headline = content?.heroHeadline || 'Website Portofolio Mahasiswa, <span class="text-primary">Siap Online</span> dalam 10 Menit';
-  const subheadline = content?.heroSubheadline || 'Tingkatkan personal branding kamu dan pikat HRD dengan website profesional tanpa perlu belajar coding yang rumit.';
-
+  const { data: content, isLoading } = useDoc<LandingPage>(landingPageRef);
 
   return (
     <div className="flex flex-col min-h-dvh bg-white">
@@ -83,7 +85,7 @@ export default function Home() {
                           <Skeleton className="h-12 w-3/4" />
                       </div>
                   ) : (
-                      <span dangerouslySetInnerHTML={{ __html: headline }} />
+                      <span dangerouslySetInnerHTML={{ __html: content?.heroHeadline || '' }} />
                   )}
                 </h1>
                 <div className="max-w-[600px] text-muted-foreground md:text-xl">
@@ -93,7 +95,7 @@ export default function Home() {
                           <Skeleton className="h-6 w-5/6" />
                       </div>
                   ) : (
-                      subheadline
+                      content?.heroSubheadline
                   )}
                 </div>
                 <div className="flex flex-col gap-4 sm:flex-row items-center">
@@ -130,10 +132,18 @@ export default function Home() {
         {/* Kenapa Sulit Section */}
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container mx-auto px-4 md:px-6 text-center max-w-3xl">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-4">Kenapa Sulit Dapat Kerja?</h2>
-            <p className="text-muted-foreground text-lg">
-              Lamar kerja ratusan kali tapi tidak dipanggil? Mungkin CV kamu kurang menarik. Di era digital yang kompetitif ini, sekadar CV PDF tidak cukup. Kamu butuh portofolio online yang hidup untuk menvalidasi skill dan membedakan dirimu dari kandidat lain.
-            </p>
+             {isLoading ? (
+                <div className='space-y-4'>
+                    <Skeleton className="h-10 w-2/3 mx-auto" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-5/6 mx-auto" />
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-4">{content?.problemHeadline}</h2>
+                  <p className="text-muted-foreground text-lg">{content?.problemText}</p>
+                </>
+              )}
           </div>
         </section>
 
@@ -141,34 +151,37 @@ export default function Home() {
         <section id="keuntungan" className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
-              <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium">KEUNTUNGAN</div>
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Kenapa Harus Template Ini?</h2>
-              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Desain premium dengan harga mahasiswa. Dibuat khusus untuk kebutuhan karirmu.
-              </p>
+               {isLoading ? (
+                  <div className='space-y-4 w-full max-w-3xl'>
+                    <Skeleton className="h-8 w-32 mx-auto" />
+                    <Skeleton className="h-12 w-2/3 mx-auto" />
+                    <Skeleton className="h-6 w-full" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium">{content?.featuresSectionBadge}</div>
+                    <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">{content?.featuresSectionHeadline}</h2>
+                    <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                     {content?.featuresSectionSubheadline}
+                    </p>
+                  </>
+                )}
             </div>
             <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3">
-              <div className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md">
-                <div className="flex justify-center"><div className="bg-primary/10 rounded-full p-3 w-fit"><CheckCircle className="size-8 text-primary" /></div></div>
-                <h3 className="text-xl font-bold">Tampil Profesional</h3>
-                <p className="text-sm text-muted-foreground">
-                  Desain bersih dan modern yang membuatmu terlihat lebih kredibel dan "mahal" di mata HRD atau klien potensial.
-                </p>
-              </div>
-              <div className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md">
-                <div className="flex justify-center"><div className="bg-primary/10 rounded-full p-3 w-fit"><Zap className="size-8 text-primary" /></div></div>
-                <h3 className="text-xl font-bold">Setup Mudah & Cepat</h3>
-                <p className="text-sm text-muted-foreground">
-                  Integrasi mudah dengan Notion atau text file, tidak perlu pusing coding, cukup fokus pada isi konten portofoliomu.
-                </p>
-              </div>
-              <div className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md">
-                <div className="flex justify-center"><div className="bg-primary/10 rounded-full p-3 w-fit"><Search className="size-8 text-primary" /></div></div>
-                <h3 className="text-xl font-bold">SEO Friendly</h3>
-                <p className="text-sm text-muted-foreground">
-                  Struktur kode yang optimal agar namamu mudah ditemukan di halaman pertama Google saat recruiter mencarimu.
-                </p>
-              </div>
+              {isLoading ? Array(3).fill(0).map((_, i) => (
+                <div key={i} className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md">
+                  <Skeleton className="h-14 w-14 rounded-full mx-auto" />
+                  <Skeleton className="h-7 w-3/4 mx-auto" />
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-5/6 mx-auto" />
+                </div>
+              )) : content?.features.map((feature, index) => (
+                <div key={index} className="grid gap-4 text-center p-6 rounded-lg bg-white shadow-md">
+                  <div className="flex justify-center"><div className="bg-primary/10 rounded-full p-3 w-fit">{featureIcons[index]}</div></div>
+                  <h3 className="text-xl font-bold">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -211,24 +224,32 @@ export default function Home() {
         {/* 3 Steps Section */}
         <section id="cara-kerja" className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
           <div className="container text-center">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Hanya 3 Langkah Mudah</h2>
-            <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-lg">Siapapun bisa melakukannya, bahkan jika kamu baru pertama kali membuat website.</p>
+            {isLoading ? (
+               <div className='space-y-4 max-w-2xl mx-auto'>
+                  <Skeleton className="h-10 w-2/3 mx-auto" />
+                  <Skeleton className="h-6 w-full" />
+              </div>
+            ) : (
+              <>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">{content?.stepsSectionHeadline}</h2>
+                <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-lg">{content?.stepsSectionSubheadline}</p>
+              </>
+            )}
             <div className="grid md:grid-cols-3 gap-8 mt-12 max-w-4xl mx-auto">
-              <div className="flex flex-col items-center text-center">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-xl mb-4">1</div>
-                  <h3 className="font-bold text-xl mb-2">Pilih & Beli</h3>
-                  <p className="text-muted-foreground text-sm">Pilih template yang kamu suka, lakukan pembayaran, dan dapatkan akses file selamanya.</p>
-              </div>
-              <div className="flex flex-col items-center text-center">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-xl mb-4">2</div>
-                  <h3 className="font-bold text-xl mb-2">Deploy ke Vercel</h3>
-                  <p className="text-muted-foreground text-sm">Hubungkan akun Github kamu ke Vercel, klik deploy, dan website live dalam hitungan detik.</p>
-              </div>
-              <div className="flex flex-col items-center text-center">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-xl mb-4">3</div>
-                  <h3 className="font-bold text-xl mb-2">Edit & Online</h3>
-                  <p className="text-muted-foreground text-sm">Ubah teks dan foto sesuai keinginanmu lewat file config yang simpel. Selesai!</p>
-              </div>
+              {isLoading ? Array(3).fill(0).map((_, i) => (
+                <div key={i} className="flex flex-col items-center text-center space-y-3">
+                  <Skeleton className="w-12 h-12 rounded-full" />
+                  <Skeleton className="h-7 w-1/2" />
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-3/4" />
+                </div>
+              )) : content?.steps.map((step, index) => (
+                <div key={index} className="flex flex-col items-center text-center">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-bold text-xl mb-4">{index + 1}</div>
+                    <h3 className="font-bold text-xl mb-2">{step.title}</h3>
+                    <p className="text-muted-foreground text-sm">{step.description}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -264,9 +285,29 @@ export default function Home() {
         {/* Testimonials Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
           <div className="container mx-auto px-4 md:px-6">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl text-center mb-12">Kata Mereka</h2>
+            {isLoading ? (
+              <Skeleton className="h-10 w-1/3 mx-auto mb-12" />
+            ) : (
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl text-center mb-12">{content?.testimonialsSectionHeadline}</h2>
+            )}
             <div className="grid gap-8 md:grid-cols-3">
-              {testimonials.map((testimonial, index) => (
+              {isLoading ? Array(3).fill(0).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-6 space-y-4">
+                     <Skeleton className="h-5 w-1/2" />
+                     <Skeleton className="h-5 w-full" />
+                     <Skeleton className="h-5 w-full" />
+                     <Skeleton className="h-5 w-2/3" />
+                     <div className="flex items-center gap-3 pt-2">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                     </div>
+                  </CardContent>
+                </Card>
+              )) : (content?.testimonials || defaultTestimonials).map((testimonial, index) => (
                 <Card key={index}>
                   <CardContent className="p-6">
                     <div className="flex mb-2">

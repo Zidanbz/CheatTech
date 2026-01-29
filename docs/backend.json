@@ -181,6 +181,93 @@
         "heroSubheadline": {
           "type": "string",
           "description": "The sub-headline in the hero section."
+        },
+        "problemHeadline": {
+          "type": "string"
+        },
+        "problemText": {
+          "type": "string"
+        },
+        "featuresSectionBadge": {
+          "type": "string"
+        },
+        "featuresSectionHeadline": {
+          "type": "string"
+        },
+        "featuresSectionSubheadline": {
+          "type": "string"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "description"
+            ]
+          }
+        },
+        "stepsSectionHeadline": {
+          "type": "string"
+        },
+        "stepsSectionSubheadline": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "description"
+            ]
+          }
+        },
+        "testimonialsSectionHeadline": {
+          "type": "string"
+        },
+        "testimonials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              },
+              "avatar": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "name",
+              "role",
+              "quote",
+              "avatar"
+            ]
+          }
         }
       },
       "required": [

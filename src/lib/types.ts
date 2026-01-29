@@ -24,10 +24,38 @@ export type Order = {
   status: 'Completed' | 'Pending' | 'Processed';
 };
 
+export type Feature = {
+  title: string;
+  description: string;
+};
+
+export type Step = {
+  title: string;
+  description: string;
+};
+
+export type Testimonial = {
+  name: string;
+  role: string;
+  quote: string;
+  avatar: string;
+};
+
 export type LandingPage = {
   id: string;
   heroHeadline: string;
   heroSubheadline: string;
+  problemHeadline: string;
+  problemText: string;
+  featuresSectionBadge: string;
+  featuresSectionHeadline: string;
+  featuresSectionSubheadline: string;
+  features: Feature[];
+  stepsSectionHeadline: string;
+  stepsSectionSubheadline: string;
+  steps: Step[];
+  testimonialsSectionHeadline: string;
+  testimonials: Testimonial[];
 };
 
 export type Voucher = {
