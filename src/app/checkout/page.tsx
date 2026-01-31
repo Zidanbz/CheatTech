@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useFirestore, useUser } from "@/firebase";
@@ -29,7 +29,7 @@ const formSchema = z.object({
   email: z.string().email({ message: "Harap masukkan alamat email yang valid." }),
 });
 
-export default function CheckoutPage() {
+function CheckoutView() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -219,4 +219,16 @@ export default function CheckoutPage() {
       </div>
     </div>
   );
+}
+
+export default function CheckoutPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+        }>
+            <CheckoutView />
+        </Suspense>
+    );
 }
