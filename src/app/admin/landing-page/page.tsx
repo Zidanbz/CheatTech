@@ -37,7 +37,7 @@ import {
 } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useState, useTransition, useEffect } from 'react';
-import { Loader2, Wand2, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, Wand2, PlusCircle, Trash2, UploadCloud } from 'lucide-react';
 import type { LandingPage } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/dialog';
 import { generateHeadlineSuggestions } from '@/ai/flows/generate-headline-suggestions';
 import { Skeleton } from '@/components/ui/skeleton';
+import Image from 'next/image';
 
 const formSchema = z.object({
   heroHeadline: z.string().min(10, { message: 'Headline minimal 10 karakter.' }),
@@ -175,6 +176,7 @@ export default function LandingPageManagementPage() {
   const [showSuggestionsDialog, setShowSuggestionsDialog] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -185,11 +187,35 @@ export default function LandingPageManagementPage() {
   const { fields: stepFields, append: appendStep, remove: removeStep } = useFieldArray({ control: form.control, name: 'steps' });
   const { fields: testimonialFields, append: appendTestimonial, remove: removeTestimonial } = useFieldArray({ control: form.control, name: 'testimonials' });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          variant: "destructive",
+          title: "File terlalu besar",
+          description: "Ukuran file maksimal 2MB.",
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setImagePreview(result);
+        form.setValue('heroImageUrl', result, { shouldDirty: true });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   useEffect(() => {
     const initializeContent = async () => {
       if (firestore && !isLoadingContent) {
         if (pageContent) {
           form.reset(pageContent);
+          if (pageContent.heroImageUrl) {
+            setImagePreview(pageContent.heroImageUrl);
+          }
         } else {
           try {
             await setDoc(doc(firestore, 'landingPage', 'main'), defaultContent);
@@ -323,12 +349,51 @@ export default function LandingPageManagementPage() {
                           name="heroImageUrl"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>URL Gambar Hero</FormLabel>
+                              <FormLabel>Gambar Hero</FormLabel>
                               <FormControl>
-                                <Input placeholder="https://images.unsplash.com/..." {...field} />
+                                <div className="flex items-center justify-center w-full">
+                                  <label
+                                    htmlFor="dropzone-file"
+                                    className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/50"
+                                  >
+                                    {imagePreview ? (
+                                      <>
+                                        <Image
+                                          src={imagePreview}
+                                          alt="Pratinjau gambar"
+                                          fill
+                                          className="object-contain rounded-md p-2"
+                                        />
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                          <p className="text-white text-center">
+                                            Klik atau tarik gambar untuk mengganti
+                                          </p>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                                        <UploadCloud className="w-8 h-8 mb-4 text-muted-foreground" />
+                                        <p className="mb-2 text-sm text-muted-foreground">
+                                          <span className="font-semibold">Klik untuk upload</span> atau
+                                          tarik gambar ke sini
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          PNG, JPG, WebP (Maks. 2MB)
+                                        </p>
+                                      </div>
+                                    )}
+                                    <input
+                                      id="dropzone-file"
+                                      type="file"
+                                      className="hidden"
+                                      onChange={handleFileChange}
+                                      accept="image/png, image/jpeg, image/webp"
+                                    />
+                                  </label>
+                                </div>
                               </FormControl>
                               <FormDescription>
-                                Masukkan URL gambar yang akan ditampilkan di bagian hero.
+                                Ganti gambar utama yang tampil di halaman depan.
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
