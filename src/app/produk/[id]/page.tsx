@@ -11,19 +11,19 @@ import type { Product } from "@/lib/types";
 
 const featureDetails = {
   "Desain Modern & Responsif": {
-    icon: <Palette className="h-10 w-10 text-primary" />,
+    icon: Palette,
     description: "Tampil memukau di semua perangkat, dari desktop hingga ponsel. Desain kami mengikuti tren terkini untuk memastikan portofolio Anda terlihat profesional dan menarik."
   },
   "Mudah Disesuaikan": {
-    icon: <LayoutTemplate className="h-10 w-10 text-primary" />,
+    icon: LayoutTemplate,
     description: "Ubah warna, font, dan tata letak dengan mudah tanpa perlu pengetahuan koding. Sesuaikan template untuk mencerminkan kepribadian unik Anda."
   },
   "SEO-Friendly": {
-    icon: <Zap className="h-10 w-10 text-primary" />,
+    icon: Zap,
     description: "Struktur kode yang dioptimalkan untuk mesin pencari membantu portofolio Anda lebih mudah ditemukan di Google, membuka lebih banyak peluang."
   },
   "Dukungan Penuh": {
-    icon: <ShieldCheck className="h-10 w-10 text-primary" />,
+    icon: ShieldCheck,
     description: "Kami menyediakan panduan lengkap dan dukungan pelanggan untuk membantu Anda setiap saat. Anda tidak akan pernah sendirian dalam proses ini."
   }
 };
@@ -91,7 +91,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       <div className="mt-16 md:mt-24">
         <div className="text-center mb-12">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl font-headline">Fitur yang Mengubah Permainan</h2>
-            <p className="max-w-2xl mx-auto mt-4 text-foreground/80 md:text-xl/relaxed">
+            <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
                 Jelajahi fungsionalitas canggih yang membuat template kami menjadi pilihan terbaik.
             </p>
         </div>
@@ -99,12 +99,17 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <div className="grid md:grid-cols-2 gap-10">
             {product.features.map(feature => {
                 const details = featureDetails[feature as keyof typeof featureDetails];
+                const Icon = details?.icon || CheckCircle;
                 return (
                     <div key={feature} className="flex gap-6">
-                        <div className="flex-shrink-0 mt-1">{details?.icon || <CheckCircle className="h-10 w-10 text-primary"/>}</div>
+                        <div className="flex-shrink-0">
+                          <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10">
+                              <Icon className="h-6 w-6 text-primary" />
+                          </div>
+                        </div>
                         <div>
                             <h3 className="text-xl font-bold">{feature}</h3>
-                            <p className="text-foreground/70 mt-2">{details?.description || "Deskripsi detail fitur akan muncul di sini."}</p>
+                            <p className="text-muted-foreground mt-2">{details?.description || "Deskripsi detail fitur akan muncul di sini."}</p>
                         </div>
                     </div>
                 );
