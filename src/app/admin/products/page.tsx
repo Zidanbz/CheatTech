@@ -205,9 +205,11 @@ export default function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-0">
-                        <Button variant="ghost" size="icon">
-                          <FileEdit className="h-4 w-4" />
-                          <span className="sr-only">Edit Produk</span>
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link href={`/admin/products/edit/${product.id}`}>
+                            <FileEdit className="h-4 w-4" />
+                            <span className="sr-only">Edit Produk</span>
+                          </Link>
                         </Button>
                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
                           <Trash2 className="h-4 w-4" />
