@@ -92,7 +92,7 @@ const defaultContent: Omit<LandingPage, 'id'> = {
   heroImageUrl: 'https://picsum.photos/seed/hero-image/600/400',
   problemHeadline: 'Kenapa Sulit Dapat Kerja?',
   problemText:
-    'Lamar kerja ratusan kali tapi tidak dipanggil? Mungkin CV kamu kurang menarik. Di era digital yang kompetitif ini, sekadar CV PDF tidak cukup. Kamu butuh portofolio online yang hidup untuk menvalidasi skill dan membedakan dirimu dari kandidat lain.',
+    'Ratusan lamaran kerja terkirim, namun tak ada panggilan? Mungkin bukan skill kamu yang kurang, tapi cara kamu menampilkannya. Di era digital yang kompetitif ini, CV statis saja tidak akan membuatmu dilirik. Kamu butuh sebuah panggung—sebuah portofolio online profesional—untuk membuktikan kemampuanmu dan bersinar di antara kandidat lain.',
   featuresSectionBadge: 'KEUNTUNGAN',
   featuresSectionHeadline: 'Kenapa Harus Template Ini?',
   featuresSectionSubheadline:

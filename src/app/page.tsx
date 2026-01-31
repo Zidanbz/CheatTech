@@ -171,23 +171,37 @@ export default function Home() {
           transition={{ duration: 0.5 }}
           className="w-full py-12 md:py-24 lg:py-32"
         >
-          <div className="container mx-auto px-4 md:px-6 text-center max-w-3xl">
-            {isLoadingContent ? (
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-2/3 mx-auto" />
-                <Skeleton className="h-6 w-full" />
-                <Skeleton className="h-6 w-5/6 mx-auto" />
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="flex justify-center order-2 md:order-1">
+                <Image
+                  src="https://picsum.photos/seed/job-search/500/500"
+                  width={450}
+                  height={450}
+                  alt="Frustrated job seeker"
+                  className="rounded-2xl shadow-lg transform transition-transform hover:scale-105"
+                  data-ai-hint="frustrated developer"
+                />
               </div>
-            ) : (
-              <>
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-4">
-                  {content?.problemHeadline}
-                </h2>
-                <div className="text-muted-foreground text-lg">
-                  {content?.problemText}
-                </div>
-              </>
-            )}
+              <div className="space-y-4 text-center md:text-left order-1 md:order-2">
+                {isLoadingContent ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-5/6" />
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl mb-4">
+                      {content?.problemHeadline}
+                    </h2>
+                    <p className="text-muted-foreground text-lg leading-relaxed">
+                      {content?.problemText}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </motion.section>
 
