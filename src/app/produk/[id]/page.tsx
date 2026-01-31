@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Palette, LayoutTemplate, Zap, ShieldCheck, Loader2 } from "lucide-react";
 import Image from "next/image";
@@ -30,7 +31,8 @@ const featureDetails = {
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
-  const id = params.id;
+  const resolvedParams = React.use(params as unknown as Promise<{ id: string }>);
+  const id = resolvedParams.id;
 
   const productRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'products', id) : null),
