@@ -19,51 +19,53 @@ import { useState, useTransition, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useFirestore, useUser } from "@/firebase";
-import { doc, getDoc, setDoc, collection, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, Timestamp } from 'firebase/firestore';
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Nama harus memiliki setidaknya 2 karakter." }),
   email: z.string().email({ message: "Harap masukkan alamat email yang valid." }),
 });
 
-const defaultProductData: Omit<Product, 'id' | 'active'> & { active: boolean } = {
-    name: "Template Portfolio Instan",
-    headline: "Buat Kesan Pertama yang Tak Terlupakan",
-    subheadline: "Tingkatkan personal branding Anda dengan template portfolio yang modern, profesional, dan mudah disesuaikan. Dapatkan pekerjaan impian Anda sekarang!",
-    description: "Buat portfolio profesional dalam hitungan menit dengan template siap pakai kami. Dirancang untuk mahasiswa dan fresh graduate untuk memamerkan proyek dan keterampilan mereka secara efektif.",
-    features: ["Desain Modern & Responsif", "Mudah Disesuaikan", "SEO-Friendly", "Dukungan Penuh"],
-    price: 149000,
-    imageUrl: "https://picsum.photos/seed/cheatsheet/1200/800",
-    active: true,
-};
-
 export default function CheckoutPage() {
   const [product, setProduct] = useState<Product | null>(null);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get('productId');
 
   useEffect(() => {
-    async function getProduct(id: string): Promise<Product> {
-        if (!firestore) throw new Error("Firestore not initialized");
-        const docRef = doc(firestore, 'products', id);
+    async function getProduct() {
+        if (!firestore || !productId) {
+            setIsLoadingProduct(false);
+            return;
+        };
+
+        const docRef = doc(firestore, 'products', productId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() } as Product;
+            setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
         } else {
-            await setDoc(docRef, defaultProductData);
-            return { id, ...defaultProductData, active: true };
+            toast({
+                title: "Produk Tidak Ditemukan",
+                description: "Sepertinya produk yang ingin Anda beli tidak ada.",
+                variant: "destructive"
+            });
+            router.push('/produk');
         }
+        setIsLoadingProduct(false);
     }
-    if(firestore) {
-      getProduct('main-template').then(setProduct);
+    if (firestore) {
+      getProduct();
     }
-  }, [firestore]);
+  }, [firestore, productId, router, toast]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -72,6 +74,13 @@ export default function CheckoutPage() {
       email: "",
     },
   });
+  
+  useEffect(() => {
+    if (user && !user.isAnonymous) {
+      form.setValue('name', user.displayName || '');
+      form.setValue('email', user.email || '');
+    }
+  }, [user, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!product || !firestore || !user) {
@@ -109,13 +118,34 @@ export default function CheckoutPage() {
           }
     });
   }
-  
-  if (!product || isUserLoading) {
+
+  if (isUserLoading || isLoadingProduct) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (!productId) {
+     return (
+      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-200px)] text-center">
+        <h2 className="text-2xl font-semibold">Tidak Ada Produk Dipilih</h2>
+        <p className="text-muted-foreground mt-2">Silakan pilih template terlebih dahulu untuk melanjutkan.</p>
+        <Button asChild className="mt-6">
+            <Link href="/produk">Lihat Semua Template</Link>
+        </Button>
+      </div>
+     )
+  }
+  
+  if (!product) {
+      return (
+        <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
+          {/* This state is handled by the redirect in useEffect, but adding a fallback UI */}
+          <p>Mengarahkan Anda kembali...</p>
+        </div>
+      );
   }
 
   return (
@@ -158,9 +188,9 @@ export default function CheckoutPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isPending || !user}>
+                  <Button type="submit" className="w-full" disabled={isPending || !user}>
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Pesan Sekarang
+                    Bayar Rp{product.price.toLocaleString('id-ID')}
                   </Button>
                 </form>
               </Form>
@@ -183,7 +213,7 @@ export default function CheckoutPage() {
                 </CardContent>
             </Card>
             <p className="text-xs text-foreground/60">
-              Dengan mengklik "Pesan Sekarang", Anda menyetujui Syarat dan Ketentuan kami. Anda akan diarahkan ke halaman pembayaran setelah ini.
+              Dengan mengklik tombol bayar, Anda menyetujui Syarat dan Ketentuan kami. Anda akan diarahkan ke halaman pembayaran setelah ini.
             </p>
         </div>
       </div>

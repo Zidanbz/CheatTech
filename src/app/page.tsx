@@ -102,7 +102,7 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col gap-4 sm:flex-row items-center">
                   <Button asChild size="lg">
-                    <Link href="/checkout">Beli Sekarang</Link>
+                    <Link href="/produk">Beli Sekarang</Link>
                   </Button>
                   <Button asChild variant="outline" size="lg">
                     <Link href="/produk">Lihat Demo</Link>
@@ -338,7 +338,7 @@ export default function Home() {
                                 Rp {product.price.toLocaleString('id-ID')}
                               </p>
                               <Button variant="outline" size="sm" asChild>
-                                <Link href="/produk">Detail</Link>
+                                <Link href={`/produk/${product.id}`}>Detail</Link>
                               </Button>
                             </div>
                           </div>
@@ -460,7 +460,7 @@ export default function Home() {
                       </li>
                     </ul>
                     <Button asChild size="lg" className="w-full">
-                      <Link href="/checkout">Pilih Template</Link>
+                      <Link href="/produk">Pilih Template</Link>
                     </Button>
                     <p className="text-xs text-muted-foreground mt-4">
                       Pilih template lainnya di atas untuk membeli.

@@ -1,134 +1,109 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { CheckCircle, Palette, LayoutTemplate, Zap, ShieldCheck, Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import type { Product } from '@/lib/types';
+import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import type { Product } from "@/lib/types";
-import { useFirestore } from "@/firebase";
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { motion } from "framer-motion";
 
-
-const featureDetails = {
-  "Desain Modern & Responsif": {
-    icon: <Palette className="h-10 w-10 text-primary" />,
-    description: "Tampil memukau di semua perangkat, dari desktop hingga ponsel. Desain kami mengikuti tren terkini untuk memastikan portofolio Anda terlihat profesional dan menarik."
-  },
-  "Mudah Disesuaikan": {
-    icon: <LayoutTemplate className="h-10 w-10 text-primary" />,
-    description: "Ubah warna, font, dan tata letak dengan mudah tanpa perlu pengetahuan koding. Sesuaikan template untuk mencerminkan kepribadian unik Anda."
-  },
-  "SEO-Friendly": {
-    icon: <Zap className="h-10 w-10 text-primary" />,
-    description: "Struktur kode yang dioptimalkan untuk mesin pencari membantu portofolio Anda lebih mudah ditemukan di Google, membuka lebih banyak peluang."
-  },
-  "Dukungan Penuh": {
-    icon: <ShieldCheck className="h-10 w-10 text-primary" />,
-    description: "Kami menyediakan panduan lengkap dan dukungan pelanggan untuk membantu Anda setiap saat. Anda tidak akan pernah sendirian dalam proses ini."
-  }
-};
-
-const defaultProductData: Omit<Product, 'id' | 'active'> & { active: boolean } = {
-    name: "Template Portfolio Instan",
-    headline: "Buat Kesan Pertama yang Tak Terlupakan",
-    subheadline: "Tingkatkan personal branding Anda dengan template portfolio yang modern, profesional, dan mudah disesuaikan. Dapatkan pekerjaan impian Anda sekarang!",
-    description: "Buat portfolio profesional dalam hitungan menit dengan template siap pakai kami. Dirancang untuk mahasiswa dan fresh graduate untuk memamerkan proyek dan keterampilan mereka secara efektif.",
-    features: ["Desain Modern & Responsif", "Mudah Disesuaikan", "SEO-Friendly", "Dukungan Penuh"],
-    price: 149000,
-    imageUrl: "https://picsum.photos/seed/cheatsheet/1200/800",
-    active: true,
-};
-
-
-export default function ProductPage() {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export default function AllProductsPage() {
   const firestore = useFirestore();
-  
-  useEffect(() => {
-    async function getProduct(id: string): Promise<Product> {
-        const docRef = doc(firestore, 'products', id);
-        const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() } as Product;
-        } else {
-            await setDoc(docRef, defaultProductData);
-            return { id, ...defaultProductData, active: true };
-        }
-    }
-    if (firestore) {
-      setIsLoading(true);
-      getProduct('main-template').then(p => {
-        setProduct(p);
-        setIsLoading(false);
-      });
-    }
-  }, [firestore]);
-  
-  const productImage = PlaceHolderImages.find(p => p.id === 'product-template-preview');
-  
-  if (isLoading || !product) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-  
+  const productsQuery = useMemoFirebase(
+    () =>
+      firestore
+        ? query(collection(firestore, 'products'), where('active', '==', true))
+        : null,
+    [firestore]
+  );
+  const { data: products, isLoading: isLoadingProducts } =
+    useCollection<Product>(productsQuery);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { duration: 0.5 },
+    },
+  };
+
   return (
     <div className="container mx-auto px-4 py-12 md:px-6 md:py-16">
-      <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-3xl font-bold font-headline sm:text-4xl">{product.name}</h1>
-          <p className="text-foreground/80 text-lg">{product.description}</p>
-          <div className="flex items-center gap-4">
-            <span className="text-4xl font-bold text-primary">Rp{product.price.toLocaleString('id-ID')}</span>
-            <span className="text-sm text-foreground/60">Pembayaran sekali seumur hidup</span>
-          </div>
-          <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto">
-            <Link href="/checkout">Beli Sekarang</Link>
-          </Button>
-        </div>
-        <div className="aspect-video overflow-hidden rounded-xl border">
-          {productImage && (
-             <Image
-                src={productImage.imageUrl}
-                alt="Product Demo"
-                width={1200}
-                height={800}
-                className="object-cover w-full h-full"
-                data-ai-hint={productImage.imageHint}
-              />
-          )}
-        </div>
-      </div>
-
-      <div className="mt-16 md:mt-24">
         <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl font-headline">Fitur yang Mengubah Permainan</h2>
-            <p className="max-w-2xl mx-auto mt-4 text-foreground/80 md:text-xl/relaxed">
-                Jelajahi fungsionalitas canggih yang membuat template kami menjadi pilihan terbaik.
+            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl">Semua Template</h1>
+            <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
+                Jelajahi semua template portofolio profesional kami yang siap pakai.
             </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-10">
-            {product.features.map(feature => {
-                const details = featureDetails[feature as keyof typeof featureDetails];
-                return (
-                    <div key={feature} className="flex gap-6">
-                        <div className="flex-shrink-0 mt-1">{details?.icon || <CheckCircle className="h-10 w-10 text-primary"/>}</div>
-                        <div>
-                            <h3 className="text-xl font-bold">{feature}</h3>
-                            <p className="text-foreground/70 mt-2">{details?.description || "Deskripsi detail fitur akan muncul di sini."}</p>
+        {isLoadingProducts ? (
+            <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+        ) : (
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
+            >
+              {products?.map((product) => (
+                <motion.div key={product.id} variants={itemVariants}>
+                  <Card className="overflow-hidden transform transition-all hover:-translate-y-2 hover:shadow-2xl">
+                    <CardContent className="p-0">
+                      <Link href={`/produk/${product.id}`}>
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          width={400}
+                          height={300}
+                          className="w-full aspect-[4/3] object-cover"
+                          data-ai-hint="portfolio website"
+                        />
+                      </Link>
+                      <div className="p-4">
+                        <h3 className="font-bold text-lg truncate">
+                          {product.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1 mb-4 h-10 line-clamp-2">
+                          {product.subheadline}
+                        </p>
+                        <div className="flex justify-between items-center">
+                          <p className="font-bold text-xl">
+                            Rp {product.price.toLocaleString('id-ID')}
+                          </p>
+                          <Button asChild>
+                            <Link href={`/checkout?productId=${product.id}`}>Beli Sekarang</Link>
+                          </Button>
                         </div>
-                    </div>
-                );
-            })}
-        </div>
-      </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
+        )}
+         { !isLoadingProducts && products?.length === 0 && (
+            <div className="text-center py-16">
+                <h2 className="text-2xl font-semibold">Belum Ada Produk</h2>
+                <p className="text-muted-foreground mt-2">Silakan cek kembali nanti.</p>
+            </div>
+         )}
     </div>
-  )
+  );
 }

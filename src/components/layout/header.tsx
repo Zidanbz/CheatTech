@@ -65,7 +65,7 @@ export default function Header() {
             </Sheet>
           </div>
           <Button asChild>
-            <Link href="/checkout">Beli Template</Link>
+            <Link href="/produk">Beli Template</Link>
           </Button>
         </div>
       </div>
