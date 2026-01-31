@@ -83,7 +83,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <span className="text-sm text-foreground/60">Pembayaran sekali seumur hidup</span>
           </div>
           <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link href="/produk">Beli Sekarang</Link>
+            <Link href={`/checkout?productId=${product.id}`}>Beli Sekarang</Link>
           </Button>
         </div>
       </div>
