@@ -12,7 +12,7 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-3">Produk</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Semua Template</Link></li>
+              <li><Link href="/produk" className="text-muted-foreground hover:text-primary">Semua Template</Link></li>
               <li><Link href="#" className="text-muted-foreground hover:text-primary">Paket Bundle</Link></li>
               <li><Link href="#" className="text-muted-foreground hover:text-primary">Jasa Setup</Link></li>
             </ul>

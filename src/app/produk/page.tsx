@@ -88,7 +88,7 @@ export default function AllProductsPage() {
                             Rp {product.price.toLocaleString('id-ID')}
                           </p>
                           <Button asChild>
-                            <Link href={`/checkout?productId=${product.id}`}>Beli Sekarang</Link>
+                            <Link href="/produk">Beli Sekarang</Link>
                           </Button>
                         </div>
                       </div>
