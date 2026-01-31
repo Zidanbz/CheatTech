@@ -30,10 +30,11 @@ const featureDetails = {
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
+  const id = params.id;
 
   const productRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'products', params.id) : null),
-    [firestore, params.id]
+    () => (firestore ? doc(firestore, 'products', id) : null),
+    [firestore, id]
   );
   const { data: product, isLoading } = useDoc<Product>(productRef);
 
