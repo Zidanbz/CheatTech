@@ -21,8 +21,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useStorage } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useTransition, useEffect } from 'react';
 import { ArrowLeft, Loader2, UploadCloud, PlusCircle, Trash2 } from 'lucide-react';
@@ -31,7 +32,6 @@ import Image from 'next/image';
 import type { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// This schema should cover all editable product fields
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama produk harus lebih dari 3 karakter.' }),
   headline: z.string().min(10, { message: 'Headline harus lebih dari 10 karakter.' }),
@@ -45,6 +45,7 @@ const formSchema = z.object({
 
 export default function EditProductPage() {
   const firestore = useFirestore();
+  const storage = useStorage();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -100,23 +101,34 @@ export default function EditProductPage() {
       reader.onloadend = () => {
         const result = reader.result as string;
         setImagePreview(result);
-        // In a real app, you'd upload this file to storage and get a URL.
-        // For now, we're just updating the preview and assuming the URL is entered manually or already exists.
-        // For simplicity, if a user uploads, we'll just keep using the preview URL locally.
-        // And we'll update the form value to a placeholder, as the actual URL is what matters.
-        form.setValue('imageUrl', result); // this is a base64 URL. Might be too long for firestore.
-        // The original new page used a picsum url. The edit page should probably just have a URL input field.
+        form.setValue('imageUrl', result, { shouldDirty: true }); // Mark as dirty
       };
       reader.readAsDataURL(file);
     }
   };
   
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!productRef) return;
+    if (!productRef || !storage) return;
 
     startTransition(async () => {
       try {
-        await updateDocumentNonBlocking(productRef, values);
+        let finalImageUrl = product?.imageUrl || '';
+
+        // Check if a new image was uploaded (imagePreview will be a data URL)
+        if (imagePreview && imagePreview.startsWith('data:image')) {
+          const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
+          const fileRef = storageRef(storage, filePath);
+          
+          await uploadString(fileRef, imagePreview, 'data_url');
+          finalImageUrl = await getDownloadURL(fileRef);
+        }
+
+        const updatedValues = {
+          ...values,
+          imageUrl: finalImageUrl,
+        };
+
+        await updateDocumentNonBlocking(productRef, updatedValues);
         
         toast({
           title: 'Produk Diperbarui',
@@ -279,29 +291,58 @@ export default function EditProductPage() {
                   )}
                 </div>
 
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>URL Thumbnail</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://images.unsplash.com/..." {...field} onChange={(e) => {
-                            field.onChange(e);
-                            setImagePreview(e.target.value);
-                          }}/>
-                        </FormControl>
-                        <FormDescription>Gunakan URL gambar yang valid (misal: Unsplash, Picsum).</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  {imagePreview && (
-                     <Image src={imagePreview} alt="Pratinjau gambar" width={160} height={120} className="object-contain h-32 rounded-md border bg-muted" />
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Thumbnail Produk</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center justify-center w-full">
+                          <label
+                            htmlFor="dropzone-file"
+                            className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/50"
+                          >
+                            {imagePreview ? (
+                              <>
+                                <Image
+                                  src={imagePreview}
+                                  alt="Pratinjau gambar"
+                                  fill
+                                  className="object-contain rounded-md p-2"
+                                />
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                  <p className="text-white text-center">
+                                    Klik atau tarik gambar untuk mengganti
+                                  </p>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                                <UploadCloud className="w-8 h-8 mb-4 text-muted-foreground" />
+                                <p className="mb-2 text-sm text-muted-foreground">
+                                  <span className="font-semibold">Klik untuk upload</span> atau
+                                  tarik gambar ke sini
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  PNG, JPG, WebP (Maks. 5MB)
+                                </p>
+                              </div>
+                            )}
+                            <input
+                              id="dropzone-file"
+                              type="file"
+                              className="hidden"
+                              onChange={handleFileChange}
+                              accept="image/png, image/jpeg, image/webp"
+                            />
+                          </label>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
+                />
                 
                 <FormField
                   control={form.control}
