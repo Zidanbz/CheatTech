@@ -21,11 +21,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useStorage } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase, useStorage } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 import { useRouter, useParams } from 'next/navigation';
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Loader2, UploadCloud, PlusCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -49,7 +49,7 @@ export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const productId = params.id as string;
@@ -107,46 +107,44 @@ export default function EditProductPage() {
     }
   };
   
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!productRef || !storage) return;
 
-    startTransition(() => {
-      const updateProduct = async () => {
-        try {
-          let finalImageUrl = product?.imageUrl || '';
+    setIsSubmitting(true);
+    try {
+      let finalImageUrl = product?.imageUrl || '';
 
-          // Check if a new image was uploaded (imagePreview will be a data URL)
-          if (imagePreview && imagePreview.startsWith('data:image')) {
-            const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
-            const fileRef = storageRef(storage, filePath);
-            
-            await uploadString(fileRef, imagePreview, 'data_url');
-            finalImageUrl = await getDownloadURL(fileRef);
-          }
-
-          const updatedValues = {
-            ...values,
-            imageUrl: finalImageUrl,
-          };
-
-          updateDocumentNonBlocking(productRef, updatedValues);
-          
-          toast({
-            title: 'Produk Diperbarui',
-            description: `"${values.name}" telah berhasil diperbarui.`,
-          });
-          router.push('/admin/products');
-        } catch (error) {
-          console.error('Gagal memperbarui produk:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Gagal Menyimpan',
-            description: 'Terjadi kesalahan saat memperbarui produk.',
-          });
-        }
+      // Check if a new image was uploaded (imagePreview will be a data URL)
+      if (imagePreview && imagePreview.startsWith('data:image')) {
+        const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
+        const fileRef = storageRef(storage, filePath);
+        
+        await uploadString(fileRef, imagePreview, 'data_url');
+        finalImageUrl = await getDownloadURL(fileRef);
       }
-      updateProduct();
-    });
+
+      const updatedValues = {
+        ...values,
+        imageUrl: finalImageUrl,
+      };
+
+      await updateDoc(productRef, updatedValues);
+      
+      toast({
+        title: 'Produk Diperbarui',
+        description: `"${values.name}" telah berhasil diperbarui.`,
+      });
+      router.push('/admin/products');
+    } catch (error: any) {
+      console.error('Gagal memperbarui produk:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Gagal Menyimpan',
+        description: error.message || 'Terjadi kesalahan saat memperbarui produk.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (isLoadingProduct) {
@@ -375,8 +373,8 @@ export default function EditProductPage() {
                   <Button variant="outline" type="button" onClick={() => router.back()}>
                       Batal
                   </Button>
-                  <Button type="submit" disabled={isPending}>
-                  {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Button type="submit" disabled={isSubmitting || isLoadingProduct}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Simpan Perubahan
                 </Button>
               </div>

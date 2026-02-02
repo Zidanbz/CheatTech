@@ -22,11 +22,10 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage } from '@/firebase';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { collection } from 'firebase/firestore';
+import { addDoc, collection } from 'firebase/firestore';
 import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, Loader2, UploadCloud, PlusCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -40,7 +39,6 @@ const formSchema = z.object({
   description: z.string().min(10, { message: 'Deskripsi harus memiliki setidaknya 10 karakter.' }),
   features: z.array(z.string().min(3, "Setiap fitur harus diisi.")).max(4, "Maksimal 4 fitur."),
   active: z.boolean().default(true),
-  // imageUrl is handled separately via imagePreview state, not direct form input
 });
 
 
@@ -49,7 +47,7 @@ export default function NewProductPage() {
   const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -89,7 +87,7 @@ export default function NewProductPage() {
     }
   };
   
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!firestore || !storage) {
       toast({ variant: 'destructive', title: 'Error', description: 'Koneksi database tidak tersedia.' });
       return;
@@ -99,40 +97,35 @@ export default function NewProductPage() {
       return;
     }
 
-    startTransition(() => {
-      const uploadAndSave = async () => {
-        try {
-          // 1. Upload image to Firebase Storage
-          const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
-          const fileRef = storageRef(storage, filePath);
-          await uploadString(fileRef, imagePreview, 'data_url');
-          const imageUrl = await getDownloadURL(fileRef);
+    setIsSubmitting(true);
+    try {
+      const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
+      const fileRef = storageRef(storage, filePath);
+      await uploadString(fileRef, imagePreview, 'data_url');
+      const imageUrl = await getDownloadURL(fileRef);
 
-          // 2. Prepare product data with the new image URL
-          const newProduct: Omit<Product, 'id'> = {
-            ...values,
-            imageUrl: imageUrl,
-          };
+      const newProduct: Omit<Product, 'id'> = {
+        ...values,
+        imageUrl: imageUrl,
+      };
 
-          // 3. Save product data to Firestore
-          addDocumentNonBlocking(collection(firestore, 'products'), newProduct);
-          
-          toast({
-            title: 'Produk Ditambahkan',
-            description: `"${values.name}" telah berhasil disimpan.`,
-          });
-          router.push('/admin/products');
-        } catch (error) {
-          console.error('Gagal menambahkan produk:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Gagal Menyimpan',
-            description: 'Terjadi kesalahan saat menambahkan produk baru.',
-          });
-        }
-      }
-      uploadAndSave();
-    });
+      await addDoc(collection(firestore, 'products'), newProduct);
+      
+      toast({
+        title: 'Produk Ditambahkan',
+        description: `"${values.name}" telah berhasil disimpan.`,
+      });
+      router.push('/admin/products');
+    } catch (error: any) {
+      console.error('Gagal menambahkan produk:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Gagal Menyimpan',
+        description: error.message || 'Terjadi kesalahan saat menambahkan produk baru.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -309,8 +302,8 @@ export default function NewProductPage() {
                   <Button variant="outline" type="button" onClick={() => router.back()}>
                       Batal
                   </Button>
-                  <Button type="submit" disabled={isPending}>
-                  {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Simpan Produk
                 </Button>
               </div>
