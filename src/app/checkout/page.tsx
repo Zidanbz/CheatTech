@@ -92,7 +92,7 @@ function CheckoutView() {
         return;
     }
 
-    startTransition(async () => {
+    startTransition(() => {
         try {
             const orderData = {
               customerName: values.name,
@@ -105,7 +105,7 @@ function CheckoutView() {
               status: 'Pending' as const,
             };
             const ordersCollection = collection(firestore, 'orders');
-            await addDocumentNonBlocking(ordersCollection, orderData);
+            addDocumentNonBlocking(ordersCollection, orderData);
             
             router.push('/sukses');
           } catch (e) {

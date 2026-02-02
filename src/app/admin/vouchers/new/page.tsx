@@ -75,7 +75,7 @@ export default function NewVoucherPage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!firestore || !values.validityPeriod.from || !values.validityPeriod.to) return;
 
-    startTransition(async () => {
+    startTransition(() => {
       try {
         const { validityPeriod, ...rest } = values;
         const newVoucher = {
@@ -86,7 +86,7 @@ export default function NewVoucherPage() {
             usageCount: 0,
         };
 
-        await addDocumentNonBlocking(collection(firestore, 'vouchers'), newVoucher);
+        addDocumentNonBlocking(collection(firestore, 'vouchers'), newVoucher);
         
         toast({
           title: 'Voucher Dibuat',

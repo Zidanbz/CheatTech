@@ -114,7 +114,7 @@ export default function NewProductPage() {
         };
 
         // 3. Save product data to Firestore
-        await addDocumentNonBlocking(collection(firestore, 'products'), newProduct);
+        addDocumentNonBlocking(collection(firestore, 'products'), newProduct);
         
         toast({
           title: 'Produk Ditambahkan',

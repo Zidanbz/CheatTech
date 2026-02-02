@@ -50,7 +50,7 @@ export default function NewReferralPage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!firestore || !user) return;
 
-    startTransition(async () => {
+    startTransition(() => {
       try {
         const newReferral: Omit<Referral, 'id'> = {
             ...values,
@@ -58,7 +58,7 @@ export default function NewReferralPage() {
             referralDate: Timestamp.now(),
         };
 
-        await addDocumentNonBlocking(collection(firestore, 'referrals'), newReferral);
+        addDocumentNonBlocking(collection(firestore, 'referrals'), newReferral);
         
         toast({
           title: 'Referral Ditambahkan',
