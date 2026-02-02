@@ -128,7 +128,7 @@ export default function EditProductPage() {
           imageUrl: finalImageUrl,
         };
 
-        await updateDocumentNonBlocking(productRef, updatedValues);
+        updateDocumentNonBlocking(productRef, updatedValues);
         
         toast({
           title: 'Produk Diperbarui',
