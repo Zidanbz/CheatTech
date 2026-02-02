@@ -15,13 +15,12 @@ export default function AdminLayout({
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
     if (isUserLoading) {
       return; // Tunggu sampai status otentikasi selesai dimuat
     }
-
-    const isLoginPage = pathname === '/admin/login';
 
     // Jika pengguna tidak login atau anonim, alihkan ke halaman login
     if (!user || user.isAnonymous) {
@@ -34,23 +33,26 @@ export default function AdminLayout({
         router.replace('/admin');
       }
     }
-  }, [user, isUserLoading, router, pathname]);
+  }, [user, isUserLoading, router, pathname, isLoginPage]);
 
-  // Tampilkan loading indicator saat memeriksa status otentikasi
-  if (isUserLoading) {
+  const showLoader = isUserLoading ||
+                     (!isLoginPage && (!user || user.isAnonymous)) ||
+                     (isLoginPage && user && !user.isAnonymous);
+
+  if (showLoader) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
-  
-  // Jangan tampilkan layout admin di halaman login atau jika belum terotentikasi
-  if (!user || user.isAnonymous || pathname === '/admin/login') {
+
+  // Jika ini adalah halaman login (dan pengguna belum login), tampilkan tanpa layout admin
+  if (isLoginPage) {
      return <main>{children}</main>;
   }
 
-  // Tampilkan layout admin untuk pengguna yang sudah terotentikasi
+  // Tampilkan layout admin untuk pengguna yang sudah terotentikasi di halaman lain
   return (
     <div className="flex min-h-screen w-full">
       <Sidebar />
