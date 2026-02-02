@@ -99,36 +99,39 @@ export default function NewProductPage() {
       return;
     }
 
-    startTransition(async () => {
-      try {
-        // 1. Upload image to Firebase Storage
-        const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
-        const fileRef = storageRef(storage, filePath);
-        await uploadString(fileRef, imagePreview, 'data_url');
-        const imageUrl = await getDownloadURL(fileRef);
+    startTransition(() => {
+      const uploadAndSave = async () => {
+        try {
+          // 1. Upload image to Firebase Storage
+          const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
+          const fileRef = storageRef(storage, filePath);
+          await uploadString(fileRef, imagePreview, 'data_url');
+          const imageUrl = await getDownloadURL(fileRef);
 
-        // 2. Prepare product data with the new image URL
-        const newProduct: Omit<Product, 'id'> = {
-          ...values,
-          imageUrl: imageUrl,
-        };
+          // 2. Prepare product data with the new image URL
+          const newProduct: Omit<Product, 'id'> = {
+            ...values,
+            imageUrl: imageUrl,
+          };
 
-        // 3. Save product data to Firestore
-        addDocumentNonBlocking(collection(firestore, 'products'), newProduct);
-        
-        toast({
-          title: 'Produk Ditambahkan',
-          description: `"${values.name}" telah berhasil disimpan.`,
-        });
-        router.push('/admin/products');
-      } catch (error) {
-        console.error('Gagal menambahkan produk:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Gagal Menyimpan',
-          description: 'Terjadi kesalahan saat menambahkan produk baru.',
-        });
+          // 3. Save product data to Firestore
+          addDocumentNonBlocking(collection(firestore, 'products'), newProduct);
+          
+          toast({
+            title: 'Produk Ditambahkan',
+            description: `"${values.name}" telah berhasil disimpan.`,
+          });
+          router.push('/admin/products');
+        } catch (error) {
+          console.error('Gagal menambahkan produk:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Gagal Menyimpan',
+            description: 'Terjadi kesalahan saat menambahkan produk baru.',
+          });
+        }
       }
+      uploadAndSave();
     });
   }
 
@@ -261,9 +264,9 @@ export default function NewProductPage() {
                   <FormLabel>Thumbnail Produk</FormLabel>
                   <FormControl>
                       <div className="flex items-center justify-center w-full">
-                          <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/50">
+                          <label htmlFor="dropzone-file" className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/50">
                             {imagePreview ? (
-                                <Image src={imagePreview} alt="Pratinjau gambar" fill className="object-contain h-32 rounded-md p-2" />
+                                <Image src={imagePreview} alt="Pratinjau gambar" fill className="object-contain rounded-md p-2" />
                             ) : (
                               <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
                                   <UploadCloud className="w-8 h-8 mb-4 text-muted-foreground" />

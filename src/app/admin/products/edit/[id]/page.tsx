@@ -110,39 +110,42 @@ export default function EditProductPage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!productRef || !storage) return;
 
-    startTransition(async () => {
-      try {
-        let finalImageUrl = product?.imageUrl || '';
+    startTransition(() => {
+      const updateProduct = async () => {
+        try {
+          let finalImageUrl = product?.imageUrl || '';
 
-        // Check if a new image was uploaded (imagePreview will be a data URL)
-        if (imagePreview && imagePreview.startsWith('data:image')) {
-          const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
-          const fileRef = storageRef(storage, filePath);
+          // Check if a new image was uploaded (imagePreview will be a data URL)
+          if (imagePreview && imagePreview.startsWith('data:image')) {
+            const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
+            const fileRef = storageRef(storage, filePath);
+            
+            await uploadString(fileRef, imagePreview, 'data_url');
+            finalImageUrl = await getDownloadURL(fileRef);
+          }
+
+          const updatedValues = {
+            ...values,
+            imageUrl: finalImageUrl,
+          };
+
+          updateDocumentNonBlocking(productRef, updatedValues);
           
-          await uploadString(fileRef, imagePreview, 'data_url');
-          finalImageUrl = await getDownloadURL(fileRef);
+          toast({
+            title: 'Produk Diperbarui',
+            description: `"${values.name}" telah berhasil diperbarui.`,
+          });
+          router.push('/admin/products');
+        } catch (error) {
+          console.error('Gagal memperbarui produk:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Gagal Menyimpan',
+            description: 'Terjadi kesalahan saat memperbarui produk.',
+          });
         }
-
-        const updatedValues = {
-          ...values,
-          imageUrl: finalImageUrl,
-        };
-
-        updateDocumentNonBlocking(productRef, updatedValues);
-        
-        toast({
-          title: 'Produk Diperbarui',
-          description: `"${values.name}" telah berhasil diperbarui.`,
-        });
-        router.push('/admin/products');
-      } catch (error) {
-        console.error('Gagal memperbarui produk:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Gagal Menyimpan',
-          description: 'Terjadi kesalahan saat memperbarui produk.',
-        });
       }
+      updateProduct();
     });
   }
 
