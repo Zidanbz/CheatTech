@@ -1,0 +1,19 @@
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Publicly readable, as images need to be displayed on the site.
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if false; // Default to no-write
+    }
+
+    // Allow authenticated non-anonymous users (admins) to write to specific folders.
+    match /products/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    match /landing-page/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+  }
+}

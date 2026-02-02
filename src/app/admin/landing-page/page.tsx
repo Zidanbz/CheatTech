@@ -34,8 +34,10 @@ import {
   useFirestore,
   useMemoFirebase,
   updateDocumentNonBlocking,
+  useStorage,
 } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 import { useState, useTransition, useEffect } from 'react';
 import { Loader2, Wand2, PlusCircle, Trash2, UploadCloud } from 'lucide-react';
 import type { LandingPage } from '@/lib/types';
@@ -163,6 +165,7 @@ const defaultContent: Omit<LandingPage, 'id'> = {
 
 export default function LandingPageManagementPage() {
   const firestore = useFirestore();
+  const storage = useStorage();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
@@ -202,7 +205,7 @@ export default function LandingPageManagementPage() {
       reader.onloadend = () => {
         const result = reader.result as string;
         setImagePreview(result);
-        form.setValue('heroImageUrl', result, { shouldDirty: true });
+        // We don't set the form value directly with the data URL anymore
       };
       reader.readAsDataURL(file);
     }
@@ -268,13 +271,38 @@ export default function LandingPageManagementPage() {
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!pageRef) return;
-    startTransition(() => {
-      updateDocumentNonBlocking(pageRef, values);
-      toast({
-        title: 'Tersimpan!',
-        description: 'Perubahan pada landing page telah disimpan.',
-      });
+    if (!pageRef || !storage) return;
+    startTransition(async () => {
+      try {
+        let finalImageUrl = pageContent?.heroImageUrl || '';
+
+        // Only upload if the preview is a data URL (meaning a new file was selected)
+        if (imagePreview && imagePreview.startsWith('data:image')) {
+          const filePath = `landing-page/hero-${Date.now()}`;
+          const fileRef = storageRef(storage, filePath);
+          await uploadString(fileRef, imagePreview, 'data_url');
+          finalImageUrl = await getDownloadURL(fileRef);
+        }
+        
+        const updatedValues = {
+          ...values,
+          heroImageUrl: finalImageUrl,
+        };
+
+        updateDocumentNonBlocking(pageRef, updatedValues);
+        
+        toast({
+          title: 'Tersimpan!',
+          description: 'Perubahan pada landing page telah disimpan.',
+        });
+      } catch (error) {
+        console.error('Gagal memperbarui landing page:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Gagal Menyimpan',
+          description: 'Terjadi kesalahan saat memperbarui landing page.',
+        });
+      }
     });
   }
   
