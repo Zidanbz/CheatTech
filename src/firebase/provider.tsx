@@ -13,6 +13,7 @@ interface FirebaseProviderProps {
   firestore: Firestore;
   auth: Auth;
   storage: FirebaseStorage;
+  allowAnonymous?: boolean;
 }
 
 // Internal state for user authentication
@@ -65,6 +66,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firestore,
   auth,
   storage,
+  allowAnonymous = true,
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
@@ -85,6 +87,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         if (firebaseUser) {
           setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         } else {
+          if (!allowAnonymous) {
+            setUserAuthState({ user: null, isUserLoading: false, userError: null });
+            return;
+          }
           // If there's no user, attempt to sign in anonymously.
           signInAnonymously(auth).catch((error) => {
             console.error("FirebaseProvider: Anonymous sign-in failed:", error);
@@ -99,7 +105,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       }
     );
     return () => unsubscribe(); // Cleanup
-  }, [auth]); // Depends on the auth instance
+  }, [auth, allowAnonymous]); // Depends on the auth instance and anonymous behavior
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {

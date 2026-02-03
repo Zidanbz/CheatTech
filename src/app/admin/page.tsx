@@ -1,7 +1,7 @@
 'use client';
 import StatCard from '@/components/admin/stat-card';
 import OrdersTable from '@/components/admin/orders-table';
-import { useCollection, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy, where } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import type { Order, Product } from '@/lib/types';
@@ -16,14 +16,15 @@ import { useMemo } from 'react';
 
 export default function AdminDashboard() {
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
 
   const ordersQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'orders'), orderBy('orderDate', 'desc')) : null),
-    [firestore]
+    () => (firestore && user ? query(collection(firestore, 'orders'), orderBy('orderDate', 'desc')) : null),
+    [firestore, user]
   );
   const productsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'products') : null),
-    [firestore]
+    () => (firestore && user ? collection(firestore, 'products') : null),
+    [firestore, user]
   );
 
   const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
@@ -55,7 +56,7 @@ export default function AdminDashboard() {
     };
   }, [orders, products]);
 
-  const isLoading = isLoadingOrders || isLoadingProducts;
+  const isLoading = isUserLoading || isLoadingOrders || isLoadingProducts;
 
   if (isLoading) {
     return (

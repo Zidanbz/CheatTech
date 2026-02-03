@@ -1,0 +1,7 @@
+- [x] Analisis selesai: Button simpan stuck loading karena operasi Firebase hang tanpa timeout.
+- [x] Firebase Storage rules diperbaiki untuk allow write jika user authenticated dan isAdmin di Firestore.
+- [x] Firestore rules diperbaiki untuk allow create/update products hanya jika isAdmin.
+- [x] Timeout ditambahkan pada operasi async di onSubmit (60s upload, 30s lainnya) untuk mencegah hang permanen.
+- [x] Firestore operations diubah ke non-blocking untuk menghindari hang pada addDoc/updateDoc.
+- [x] Debug logs ditambahkan di onSubmit untuk melacak proses save.
+- [ ] Deploy rules ke Firebase (firebase deploy) dan test save produk.

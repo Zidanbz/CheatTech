@@ -21,8 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useDoc, useMemoFirebase, useStorage } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase, useStorage, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
@@ -38,10 +38,34 @@ const formSchema = z.object({
   subheadline: z.string().min(10, { message: 'Sub-headline harus lebih dari 10 karakter.' }),
   price: z.coerce.number().min(0, { message: 'Harga tidak boleh negatif.' }),
   description: z.string().min(10, { message: 'Deskripsi harus memiliki setidaknya 10 karakter.' }),
-  imageUrl: z.string().url({ message: "URL gambar tidak valid." }),
-  features: z.array(z.string().min(3, "Setiap fitur harus diisi.")).max(4, "Maksimal 4 fitur."),
+  features: z.array(
+    z.object({
+      value: z.string().min(3, "Setiap fitur harus diisi."),
+    })
+  ).max(4, "Maksimal 4 fitur."),
   active: z.boolean().default(true),
 });
+
+type ProductFormData = z.infer<typeof formSchema>;
+
+function getSubmitErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null) {
+    const code = (error as { code?: string }).code;
+    if (code === 'storage/unauthorized') {
+      return 'Akses upload ditolak. Pastikan akun admin dan field isAdmin di users/{uid} bernilai true.';
+    }
+    if (code === 'storage/retry-limit-exceeded') {
+      return 'Upload gagal karena koneksi tidak stabil. Coba lagi beberapa saat.';
+    }
+    if (code === 'permission-denied') {
+      return 'Tidak punya izin menyimpan produk. Pastikan akun admin sudah benar.';
+    }
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return 'Terjadi kesalahan saat menyimpan produk. Coba lagi.';
+}
 
 export default function EditProductPage() {
   const firestore = useFirestore();
@@ -51,16 +75,17 @@ export default function EditProductPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [submitStep, setSubmitStep] = useState<'idle' | 'uploading' | 'saving'>('idle');
 
   const productId = params.id as string;
-  
+
   const productRef = useMemoFirebase(
     () => (firestore && productId ? doc(firestore, 'products', productId) : null),
     [firestore, productId]
   );
   const { data: product, isLoading: isLoadingProduct } = useDoc<Product>(productRef);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<ProductFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
@@ -68,7 +93,6 @@ export default function EditProductPage() {
       subheadline: '',
       price: 0,
       description: '',
-      imageUrl: '',
       features: [],
       active: true,
     },
@@ -81,7 +105,15 @@ export default function EditProductPage() {
 
   useEffect(() => {
     if (product) {
-      form.reset(product);
+      form.reset({
+        name: product.name,
+        headline: product.headline,
+        subheadline: product.subheadline,
+        price: product.price,
+        description: product.description,
+        features: product.features.map((feature) => ({ value: feature })),
+        active: product.active,
+      });
       setImagePreview(product.imageUrl);
     }
   }, [product, form]);
@@ -90,7 +122,7 @@ export default function EditProductPage() {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB
-         toast({
+        toast({
           variant: "destructive",
           title: "File terlalu besar",
           description: "Ukuran file maksimal 5MB.",
@@ -101,49 +133,68 @@ export default function EditProductPage() {
       reader.onloadend = () => {
         const result = reader.result as string;
         setImagePreview(result);
-        form.setValue('imageUrl', result, { shouldDirty: true }); // Mark as dirty
       };
       reader.readAsDataURL(file);
     }
   };
-  
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!productRef || !storage) return;
 
+  const timeout = (ms: number) => new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Operasi timeout')), ms));
+
+  async function onSubmit(values: ProductFormData) {
+    console.log('onSubmit called with values:', values);
+    if (!productRef || !storage) {
+      console.log('ProductRef or storage not available');
+      toast({ variant: 'destructive', title: 'Error', description: 'Koneksi database tidak tersedia.' });
+      return;
+    }
+
+    console.log('Setting isSubmitting to true');
     setIsSubmitting(true);
     try {
+      setSubmitStep('saving');
       let finalImageUrl = product?.imageUrl || '';
+      console.log('Initial imageUrl:', finalImageUrl);
 
-      // Check if a new image was uploaded (imagePreview will be a data URL)
       if (imagePreview && imagePreview.startsWith('data:image')) {
+        setSubmitStep('uploading');
         const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
+        console.log('New file path:', filePath);
         const fileRef = storageRef(storage, filePath);
-        
-        await uploadString(fileRef, imagePreview, 'data_url');
-        finalImageUrl = await getDownloadURL(fileRef);
+        console.log('Starting upload...');
+        await Promise.race([uploadString(fileRef, imagePreview, 'data_url'), timeout(60000)]);
+        console.log('Upload completed, getting download URL...');
+        finalImageUrl = await (Promise.race([getDownloadURL(fileRef), timeout(30000)]) as Promise<string>);
+        console.log('New download URL obtained:', finalImageUrl);
       }
 
+      setSubmitStep('saving');
       const updatedValues = {
         ...values,
+        features: values.features.map((feature) => feature.value),
         imageUrl: finalImageUrl,
       };
+      console.log('Updated product data:', updatedValues);
 
-      await updateDoc(productRef, updatedValues);
-      
+      console.log('Updating document non-blocking...');
+      updateDocumentNonBlocking(productRef, updatedValues);
+
+      console.log('Toast success and redirect');
       toast({
         title: 'Produk Diperbarui',
         description: `"${values.name}" telah berhasil diperbarui.`,
       });
       router.push('/admin/products');
-    } catch (error: any) {
-      console.error('Gagal memperbarui produk:', error);
+    } catch (error: unknown) {
+      console.error('Error in onSubmit:', error);
       toast({
         variant: 'destructive',
         title: 'Gagal Menyimpan',
-        description: error.message || 'Terjadi kesalahan saat memperbarui produk.',
+        description: getSubmitErrorMessage(error),
       });
     } finally {
+      console.log('Finally: setting isSubmitting to false');
       setIsSubmitting(false);
+      setSubmitStep('idle');
     }
   }
 
@@ -160,16 +211,16 @@ export default function EditProductPage() {
 
   if (!product) {
     return (
-        <div className="text-center py-10">
-            <p>Produk tidak ditemukan.</p>
-            <Button asChild className="mt-4"><Link href="/admin/products">Kembali</Link></Button>
-        </div>
+      <div className="text-center py-10">
+        <p>Produk tidak ditemukan.</p>
+        <Button asChild className="mt-4"><Link href="/admin/products">Kembali</Link></Button>
+      </div>
     )
   }
 
   return (
     <div className="space-y-6 pb-8">
-       <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4">
         <Link href="/admin/products" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
           Kembali ke Daftar Produk
@@ -183,7 +234,7 @@ export default function EditProductPage() {
             Perbarui detail untuk template <span className="font-semibold text-foreground">{product.name}</span>.
           </p>
         </div>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <Card>
@@ -201,7 +252,7 @@ export default function EditProductPage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="headline"
                   render={({ field }) => (
@@ -214,7 +265,7 @@ export default function EditProductPage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="subheadline"
                   render={({ field }) => (
@@ -227,7 +278,7 @@ export default function EditProductPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="price"
@@ -262,14 +313,14 @@ export default function EditProductPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <div className="space-y-4">
                   <FormLabel>Fitur Unggulan (Maksimal 4)</FormLabel>
                   {fields.map((field, index) => (
                     <div key={field.id} className="flex gap-2 items-center">
                       <FormField
                         control={form.control}
-                        name={`features.${index}`}
+                        name={`features.${index}.value`}
                         render={({ field }) => (
                           <FormItem className="flex-1">
                             <FormControl>
@@ -285,66 +336,34 @@ export default function EditProductPage() {
                     </div>
                   ))}
                   {fields.length < 4 && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => append("")}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ value: "" })}>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Tambah Fitur
                     </Button>
                   )}
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="imageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Thumbnail Produk</FormLabel>
-                      <FormControl>
-                        <div className="flex items-center justify-center w-full">
-                          <label
-                            htmlFor="dropzone-file"
-                            className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/50"
-                          >
-                            {imagePreview ? (
-                              <>
-                                <Image
-                                  src={imagePreview}
-                                  alt="Pratinjau gambar"
-                                  fill
-                                  className="object-contain rounded-md p-2"
-                                />
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                  <p className="text-white text-center">
-                                    Klik atau tarik gambar untuk mengganti
-                                  </p>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
-                                <UploadCloud className="w-8 h-8 mb-4 text-muted-foreground" />
-                                <p className="mb-2 text-sm text-muted-foreground">
-                                  <span className="font-semibold">Klik untuk upload</span> atau
-                                  tarik gambar ke sini
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  PNG, JPG, WebP (Maks. 5MB)
-                                </p>
-                              </div>
-                            )}
-                            <input
-                              id="dropzone-file"
-                              type="file"
-                              className="hidden"
-                              onChange={handleFileChange}
-                              accept="image/png, image/jpeg, image/webp"
-                            />
-                          </label>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
+                <FormItem>
+                  <FormLabel>Thumbnail Produk</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center justify-center w-full">
+                      <label htmlFor="dropzone-file" className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/50">
+                        {imagePreview ? (
+                          <Image src={imagePreview} alt="Pratinjau gambar" fill className="object-contain rounded-md p-2" />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                            <UploadCloud className="w-8 h-8 mb-4 text-muted-foreground" />
+                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Klik untuk upload</span> atau tarik gambar ke sini</p>
+                            <p className="text-xs text-muted-foreground">PNG, JPG, WebP (Maks. 5MB)</p>
+                          </div>
+                        )}
+                        <input id="dropzone-file" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
+                      </label>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+
                 <FormField
                   control={form.control}
                   name="active"
@@ -355,7 +374,7 @@ export default function EditProductPage() {
                           Status Aktif
                         </FormLabel>
                         <FormDescription>
-                        Non-aktifkan untuk menyembunyikan produk dari landing page.
+                          Non-aktifkan untuk menyembunyikan produk dari landing page.
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -370,14 +389,14 @@ export default function EditProductPage() {
               </CardContent>
             </Card>
             <div className="flex justify-end gap-2 mt-8">
-                  <Button variant="outline" type="button" onClick={() => router.back()}>
-                      Batal
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting || isLoadingProduct}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Simpan Perubahan
-                </Button>
-              </div>
+              <Button variant="outline" type="button" onClick={() => router.back()}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={isSubmitting || isLoadingProduct}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSubmitting ? (submitStep === 'uploading' ? 'Mengunggah...' : 'Menyimpan...') : 'Simpan Perubahan'}
+              </Button>
+            </div>
           </form>
         </Form>
       </div>

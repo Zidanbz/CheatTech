@@ -46,7 +46,7 @@ export default function RootLayout({
           inter.variable
         )}
       >
-        <FirebaseClientProvider>
+        <FirebaseClientProvider allowAnonymous={!isAdminPage}>
           {isAdminPage ? (
              <div className="bg-background">{children}</div>
           ) : (

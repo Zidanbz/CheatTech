@@ -19,12 +19,20 @@ service cloud.firestore {
       allow get: if true;
       allow list: if true;
 
-      // WARNING: These rules are insecure for production.
-      // Any user can write to the products collection.
-      // This should be locked down to admin users in a real application.
-      allow create: if true;
-      allow update: if true;
+      allow create, update: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
       allow delete: if false; // Deleting products is not a feature yet.
+    }
+
+    /**
+     * @description
+     *  User profiles for role checks (admin).
+     * @path
+     *  /users/{userId}
+     */
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create, update, delete: if false;
     }
 
     /**

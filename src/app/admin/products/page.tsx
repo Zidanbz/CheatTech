@@ -31,7 +31,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import StatCard from '@/components/admin/stat-card';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, updateDoc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import type { Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,7 +53,6 @@ export default function ProductsPage() {
     if (!firestore) return;
     const productRef = doc(firestore, 'products', productId);
     try {
-      // Using a non-blocking update for better UI experience
       updateDocumentNonBlocking(productRef, { active: newStatus });
       toast({
         title: "Status Diperbarui",
@@ -87,7 +86,7 @@ export default function ProductsPage() {
     const startIndex = (currentPage - 1) * productsPerPage;
     return filteredProducts.slice(startIndex, startIndex + productsPerPage);
   }, [filteredProducts, currentPage]);
-  
+
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
 
   const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -139,7 +138,7 @@ export default function ProductsPage() {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setCurrentPage(1); // Reset to first page on new search
+                  setCurrentPage(1);
                 }}
               />
             </div>
@@ -165,7 +164,7 @@ export default function ProductsPage() {
                 <TableRow>
                   <TableCell colSpan={5} className="text-center h-48">
                     <div className="flex justify-center items-center">
-                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -191,7 +190,7 @@ export default function ProductsPage() {
                       Rp {product.price.toLocaleString('id-ID')}
                     </TableCell>
                     <TableCell>
-                       <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <Switch
                           id={`status-${product.id}`}
                           checked={product.active}
@@ -200,7 +199,7 @@ export default function ProductsPage() {
                           }
                           aria-label={`Status for ${product.name}`}
                         />
-                         <span className="text-sm">{product.active ? 'Aktif' : 'Nonaktif'}</span>
+                        <span className="text-sm">{product.active ? 'Aktif' : 'Nonaktif'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -230,7 +229,7 @@ export default function ProductsPage() {
           </Table>
         </CardContent>
         {totalPages > 1 && (
-            <div className="flex items-center justify-between p-4 border-t">
+          <div className="flex items-center justify-between p-4 border-t">
             <div className="text-sm text-muted-foreground">
               Menampilkan {paginatedProducts.length > 0 ? (currentPage - 1) * productsPerPage + 1 : 0}-
               {Math.min(currentPage * productsPerPage, filteredProducts.length)} dari {filteredProducts.length} produk

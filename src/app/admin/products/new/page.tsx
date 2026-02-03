@@ -21,8 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useStorage } from '@/firebase';
-import { addDoc, collection } from 'firebase/firestore';
+import { useFirestore, useStorage, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -37,10 +37,34 @@ const formSchema = z.object({
   subheadline: z.string().min(10, { message: 'Sub-headline harus lebih dari 10 karakter.' }),
   price: z.coerce.number().min(0, { message: 'Harga tidak boleh negatif.' }),
   description: z.string().min(10, { message: 'Deskripsi harus memiliki setidaknya 10 karakter.' }),
-  features: z.array(z.string().min(3, "Setiap fitur harus diisi.")).max(4, "Maksimal 4 fitur."),
+  features: z.array(
+    z.object({
+      value: z.string().min(3, "Setiap fitur harus diisi."),
+    })
+  ).max(4, "Maksimal 4 fitur."),
   active: z.boolean().default(true),
 });
 
+type ProductFormData = z.infer<typeof formSchema>;
+
+function getSubmitErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null) {
+    const code = (error as { code?: string }).code;
+    if (code === 'storage/unauthorized') {
+      return 'Akses upload ditolak. Pastikan akun admin dan field isAdmin di users/{uid} bernilai true.';
+    }
+    if (code === 'storage/retry-limit-exceeded') {
+      return 'Upload gagal karena koneksi tidak stabil. Coba lagi beberapa saat.';
+    }
+    if (code === 'permission-denied') {
+      return 'Tidak punya izin menyimpan produk. Pastikan akun admin sudah benar.';
+    }
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return 'Terjadi kesalahan saat menyimpan produk. Coba lagi.';
+}
 
 export default function NewProductPage() {
   const firestore = useFirestore();
@@ -49,8 +73,9 @@ export default function NewProductPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [submitStep, setSubmitStep] = useState<'idle' | 'uploading' | 'saving'>('idle');
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<ProductFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
@@ -58,7 +83,12 @@ export default function NewProductPage() {
       subheadline: '',
       price: 49000,
       description: '',
-      features: ["Desain Modern & Responsif", "Mudah Disesuaikan", "SEO-Friendly", "Dukungan Penuh"],
+      features: [
+        { value: "Desain Modern & Responsif" },
+        { value: "Mudah Disesuaikan" },
+        { value: "SEO-Friendly" },
+        { value: "Dukungan Penuh" },
+      ],
       active: true,
     },
   });
@@ -86,51 +116,69 @@ export default function NewProductPage() {
       reader.readAsDataURL(file);
     }
   };
-  
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+
+  const timeout = (ms: number) => new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Operasi timeout')), ms));
+
+  async function onSubmit(values: ProductFormData) {
+    console.log('onSubmit called with values:', values);
     if (!firestore || !storage) {
+      console.log('Firestore or storage not available');
       toast({ variant: 'destructive', title: 'Error', description: 'Koneksi database tidak tersedia.' });
       return;
     }
     if (!imagePreview) {
+      console.log('No image preview');
       toast({ variant: 'destructive', title: 'Gambar Diperlukan', description: 'Harap unggah gambar thumbnail untuk produk.' });
       return;
     }
 
+    console.log('Setting isSubmitting to true');
     setIsSubmitting(true);
     try {
+      setSubmitStep('uploading');
       const filePath = `products/${Date.now()}-${values.name.replace(/\s+/g, '-')}`;
+      console.log('File path:', filePath);
       const fileRef = storageRef(storage, filePath);
-      await uploadString(fileRef, imagePreview, 'data_url');
-      const imageUrl = await getDownloadURL(fileRef);
+      console.log('Starting upload...');
+      await Promise.race([uploadString(fileRef, imagePreview, 'data_url'), timeout(60000)]);
+      console.log('Upload completed, getting download URL...');
+      const imageUrl = await (Promise.race([getDownloadURL(fileRef), timeout(30000)]) as Promise<string>);
+      console.log('Download URL obtained:', imageUrl);
 
+      setSubmitStep('saving');
       const newProduct: Omit<Product, 'id'> = {
         ...values,
+        features: values.features.map((feature) => feature.value),
         imageUrl: imageUrl,
       };
+      console.log('New product data:', newProduct);
 
-      await addDoc(collection(firestore, 'products'), newProduct);
-      
+      console.log('Adding document non-blocking...');
+      addDocumentNonBlocking(collection(firestore, 'products'), newProduct);
+
+      console.log('Toast success and redirect');
       toast({
         title: 'Produk Ditambahkan',
         description: `"${values.name}" telah berhasil disimpan.`,
       });
       router.push('/admin/products');
-    } catch (error: any) {
-      console.error('Gagal menambahkan produk:', error);
+    } catch (error: unknown) {
+      console.error('Error in onSubmit:', error);
       toast({
         variant: 'destructive',
         title: 'Gagal Menyimpan',
-        description: error.message || 'Terjadi kesalahan saat menambahkan produk baru.',
+        description: getSubmitErrorMessage(error),
       });
     } finally {
+      console.log('Finally: setting isSubmitting to false');
       setIsSubmitting(false);
+      setSubmitStep('idle');
     }
   }
 
   return (
     <div className="space-y-6 pb-8">
-       <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4">
         <Link href="/admin/products" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
           Kembali ke Daftar Produk
@@ -144,7 +192,7 @@ export default function NewProductPage() {
             Lengkapi detail template portofolio untuk dipublikasikan ke toko.
           </p>
         </div>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <Card>
@@ -162,7 +210,7 @@ export default function NewProductPage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="headline"
                   render={({ field }) => (
@@ -175,7 +223,7 @@ export default function NewProductPage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="subheadline"
                   render={({ field }) => (
@@ -188,7 +236,7 @@ export default function NewProductPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="price"
@@ -223,14 +271,14 @@ export default function NewProductPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <div className="space-y-4">
                   <FormLabel>Fitur Unggulan (Maksimal 4)</FormLabel>
                   {fields.map((field, index) => (
                     <div key={field.id} className="flex gap-2 items-center">
                       <FormField
                         control={form.control}
-                        name={`features.${index}`}
+                        name={`features.${index}.value`}
                         render={({ field }) => (
                           <FormItem className="flex-1">
                             <FormControl>
@@ -246,7 +294,7 @@ export default function NewProductPage() {
                     </div>
                   ))}
                   {fields.length < 4 && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => append("")}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ value: "" })}>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Tambah Fitur
                     </Button>
@@ -256,24 +304,24 @@ export default function NewProductPage() {
                 <FormItem>
                   <FormLabel>Thumbnail Produk</FormLabel>
                   <FormControl>
-                      <div className="flex items-center justify-center w-full">
-                          <label htmlFor="dropzone-file" className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/50">
-                            {imagePreview ? (
-                                <Image src={imagePreview} alt="Pratinjau gambar" fill className="object-contain rounded-md p-2" />
-                            ) : (
-                              <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
-                                  <UploadCloud className="w-8 h-8 mb-4 text-muted-foreground" />
-                                  <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Klik untuk upload</span> atau tarik gambar ke sini</p>
-                                  <p className="text-xs text-muted-foreground">PNG, JPG, WebP (Maks. 5MB)</p>
-                              </div>
-                            )}
-                            <input id="dropzone-file" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
-                          </label>
-                      </div>
+                    <div className="flex items-center justify-center w-full">
+                      <label htmlFor="dropzone-file" className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/50">
+                        {imagePreview ? (
+                          <Image src={imagePreview} alt="Pratinjau gambar" fill className="object-contain rounded-md p-2" />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                            <UploadCloud className="w-8 h-8 mb-4 text-muted-foreground" />
+                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Klik untuk upload</span> atau tarik gambar ke sini</p>
+                            <p className="text-xs text-muted-foreground">PNG, JPG, WebP (Maks. 5MB)</p>
+                          </div>
+                        )}
+                        <input id="dropzone-file" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
+                      </label>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
-                
+
                 <FormField
                   control={form.control}
                   name="active"
@@ -284,7 +332,7 @@ export default function NewProductPage() {
                           Status Aktif
                         </FormLabel>
                         <FormDescription>
-                        Aktifkan untuk menampilkan produk di landing page.
+                          Aktifkan untuk menampilkan produk di landing page.
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -299,14 +347,14 @@ export default function NewProductPage() {
               </CardContent>
             </Card>
             <div className="flex justify-end gap-2 mt-8">
-                  <Button variant="outline" type="button" onClick={() => router.back()}>
-                      Batal
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Simpan Produk
-                </Button>
-              </div>
+              <Button variant="outline" type="button" onClick={() => router.back()}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSubmitting ? (submitStep === 'uploading' ? 'Mengunggah...' : 'Menyimpan...') : 'Simpan Produk'}
+              </Button>
+            </div>
           </form>
         </Form>
       </div>
