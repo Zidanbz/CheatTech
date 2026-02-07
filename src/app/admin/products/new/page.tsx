@@ -31,17 +31,38 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Product } from '@/lib/types';
 
+const defaultRequirements = [
+  { value: "Memiliki akun GitHub" },
+  { value: "Memiliki akun Vercel" },
+  { value: "Memiliki domain sendiri" },
+];
+
+const optionalPriceSchema = z
+  .preprocess((value) => {
+    if (value === '' || value === null || value === undefined) {
+      return undefined;
+    }
+    return value;
+  }, z.coerce.number().min(0, { message: 'Harga tidak boleh negatif.' }))
+  .optional();
+
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama produk harus lebih dari 3 karakter.' }),
   headline: z.string().min(10, { message: 'Headline harus lebih dari 10 karakter.' }),
   subheadline: z.string().min(10, { message: 'Sub-headline harus lebih dari 10 karakter.' }),
   price: z.coerce.number().min(0, { message: 'Harga tidak boleh negatif.' }),
+  originalPrice: optionalPriceSchema,
   description: z.string().min(10, { message: 'Deskripsi harus memiliki setidaknya 10 karakter.' }),
   features: z.array(
     z.object({
       value: z.string().min(3, "Setiap fitur harus diisi."),
     })
   ).max(4, "Maksimal 4 fitur."),
+  requirements: z.array(
+    z.object({
+      value: z.string().min(3, "Setiap persyaratan harus diisi."),
+    })
+  ).min(1, "Minimal 1 persyaratan.").max(4, "Maksimal 4 persyaratan."),
   active: z.boolean().default(true),
 });
 
@@ -82,6 +103,7 @@ export default function NewProductPage() {
       headline: '',
       subheadline: '',
       price: 49000,
+      originalPrice: undefined,
       description: '',
       features: [
         { value: "Desain Modern & Responsif" },
@@ -89,6 +111,7 @@ export default function NewProductPage() {
         { value: "SEO-Friendly" },
         { value: "Dukungan Penuh" },
       ],
+      requirements: defaultRequirements,
       active: true,
     },
   });
@@ -96,6 +119,11 @@ export default function NewProductPage() {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "features"
+  });
+
+  const { fields: requirementFields, append: appendRequirement, remove: removeRequirement } = useFieldArray({
+    control: form.control,
+    name: "requirements"
   });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,10 +174,13 @@ export default function NewProductPage() {
       console.log('Download URL obtained:', imageUrl);
 
       setSubmitStep('saving');
+      const { originalPrice, features, requirements, ...restValues } = values;
       const newProduct: Omit<Product, 'id'> = {
-        ...values,
-        features: values.features.map((feature) => feature.value),
+        ...restValues,
+        features: features.map((feature) => feature.value),
+        requirements: requirements.map((requirement) => requirement.value),
         imageUrl: imageUrl,
+        ...(typeof originalPrice === 'number' && originalPrice > 0 ? { originalPrice } : {}),
       };
       console.log('New product data:', newProduct);
 
@@ -242,13 +273,39 @@ export default function NewProductPage() {
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Harga (IDR)</FormLabel>
+                      <FormLabel>Harga Asli (IDR)</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground text-sm">Rp</span>
                           <Input type="number" className="pl-8" {...field} />
                         </div>
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="originalPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Harga Coret (IDR)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground text-sm">Rp</span>
+                          <Input
+                            type="number"
+                            className="pl-8"
+                            placeholder="Opsional"
+                            {...field}
+                            value={field.value ?? ''}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        Isi jika ingin menampilkan harga coret untuk kebutuhan promosi.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -297,6 +354,35 @@ export default function NewProductPage() {
                     <Button type="button" variant="outline" size="sm" onClick={() => append({ value: "" })}>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Tambah Fitur
+                    </Button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <FormLabel>Persyaratan Pembelian (Maksimal 4)</FormLabel>
+                  {requirementFields.map((field, index) => (
+                    <div key={field.id} className="flex gap-2 items-center">
+                      <FormField
+                        control={form.control}
+                        name={`requirements.${index}.value`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormControl>
+                              <Input {...field} placeholder={`Persyaratan ${index + 1}`} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="button" variant="destructive" size="icon" onClick={() => removeRequirement(index)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {requirementFields.length < 4 && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendRequirement({ value: "" })}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Tambah Persyaratan
                     </Button>
                   )}
                 </div>

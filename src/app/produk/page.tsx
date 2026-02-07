@@ -67,22 +67,30 @@ export default function AllProductsPage() {
                   <Card className="overflow-hidden transform transition-all hover:-translate-y-2 hover:shadow-2xl">
                     <CardContent className="p-0">
                       <Link href={`/produk/${product.id}`}>
-                        <Image
-                          src={product.imageUrl}
-                          alt={product.name}
-                          width={400}
-                          height={300}
-                          className="w-full aspect-[4/3] object-cover"
-                          data-ai-hint="portfolio website"
-                        />
+                        <div className="relative w-full aspect-[4/3] overflow-hidden">
+                          <Image
+                            src={product.imageUrl}
+                            alt={product.name}
+                            fill
+                            sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                            className="object-cover"
+                            data-ai-hint="portfolio website"
+                          />
+                        </div>
                       </Link>
                       <div className="p-4">
                         <h3 className="font-bold text-lg truncate">
                           {product.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground mt-1 mb-4 h-10 line-clamp-2">
+                        <p className="text-sm text-muted-foreground mt-1 h-10 line-clamp-2">
                           {product.subheadline}
                         </p>
+                        {product.requirements && product.requirements.length > 0 && (
+                          <p className="text-xs text-yellow-500 mt-2 line-clamp-2">
+                            Persyaratan: {product.requirements.slice(0, 2).join(', ')}
+                            {product.requirements.length > 2 && ` +${product.requirements.length - 2} lainnya`}
+                          </p>
+                        )}
                         <div className="flex justify-between items-center">
                           <p className="font-bold text-xl">
                             Rp {product.price.toLocaleString('id-ID')}

@@ -6,6 +6,11 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+    
+    function isAdmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
 
     /**
      * @description
@@ -19,8 +24,7 @@ service cloud.firestore {
       allow get: if true;
       allow list: if true;
 
-      allow create, update: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-      allow delete: if false; // Deleting products is not a feature yet.
+      allow create, update, delete: if isAdmin();
     }
 
     /**

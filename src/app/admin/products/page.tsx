@@ -14,6 +14,17 @@ import {
   Loader2,
 } from 'lucide-react';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Card,
   CardContent,
   CardHeader,
@@ -30,13 +41,15 @@ import {
 } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import StatCard from '@/components/admin/stat-card';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, useStorage } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { deleteObject, ref as storageRef } from 'firebase/storage';
 import type { Product } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ProductsPage() {
   const firestore = useFirestore();
+  const storage = useStorage();
   const { toast } = useToast();
 
   const productsQuery = useMemoFirebase(
@@ -64,6 +77,42 @@ export default function ProductsPage() {
         variant: "destructive",
         title: "Gagal Memperbarui",
         description: "Terjadi kesalahan saat memperbarui status produk.",
+      });
+    }
+  };
+
+  const canDeleteStorageUrl = (url?: string) => {
+    if (!url || !storage?.app?.options?.storageBucket) return false;
+    const bucket = storage.app.options.storageBucket;
+    return url.startsWith(`gs://${bucket}`) || url.includes(bucket);
+  };
+
+  const handleDelete = (product: Product) => {
+    if (!firestore) return;
+    const productRef = doc(firestore, 'products', product.id);
+    try {
+      deleteDocumentNonBlocking(productRef);
+      toast({
+        title: "Produk Dihapus",
+        description: `"${product.name}" telah dihapus.`,
+      });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast({
+        variant: "destructive",
+        title: "Gagal Menghapus",
+        description: "Terjadi kesalahan saat menghapus produk.",
+      });
+    }
+
+    if (canDeleteStorageUrl(product.imageUrl)) {
+      deleteObject(storageRef(storage, product.imageUrl)).catch((error) => {
+        console.error("Error deleting product image:", error);
+        toast({
+          variant: "destructive",
+          title: "Gambar Tidak Terhapus",
+          description: "Produk terhapus, tetapi gambar gagal dihapus dari storage.",
+        });
       });
     }
   };
@@ -210,10 +259,30 @@ export default function ProductsPage() {
                             <span className="sr-only">Edit Produk</span>
                           </Link>
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Hapus Produk</span>
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Hapus Produk</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Hapus Produk?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Produk "{product.name}" akan dihapus permanen dari katalog. Tindakan ini tidak bisa dibatalkan.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction asChild>
+                                <Button variant="destructive" onClick={() => handleDelete(product)}>
+                                  Hapus
+                                </Button>
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>

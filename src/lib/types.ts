@@ -7,7 +7,9 @@ export type Product = {
   subheadline: string;
   description: string;
   features: string[];
+  requirements?: string[];
   price: number;
+  originalPrice?: number;
   imageUrl: string;
   active: boolean;
 };

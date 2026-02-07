@@ -13,10 +13,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useTransition, useEffect, Suspense } from "react";
-import { Loader2 } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useFirestore, useUser } from "@/firebase";
 import { doc, getDoc, collection, Timestamp } from 'firebase/firestore';
@@ -33,6 +34,7 @@ function CheckoutView() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [requirementsChecked, setRequirementsChecked] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
@@ -83,6 +85,14 @@ function CheckoutView() {
   }, [user, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    if (product?.requirements && product.requirements.length > 0 && !requirementsChecked) {
+      toast({
+        title: "Persyaratan Belum Dipenuhi",
+        description: "Harap konfirmasi bahwa Anda memenuhi semua persyaratan sebelum melanjutkan.",
+        variant: "destructive"
+      });
+      return;
+    }
     if (!product || !firestore || !user) {
         toast({
             title: "Error",
@@ -188,7 +198,37 @@ function CheckoutView() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={isPending || !user}>
+                  {product.requirements && product.requirements.length > 0 && (
+                    <div className="rounded-lg border p-4 space-y-3">
+                      <div className="text-sm font-semibold">Persyaratan Pembelian</div>
+                      <ul className="space-y-2 text-sm">
+                        {product.requirements.map((requirement, index) => (
+                          <li key={`${requirement}-${index}`} className="flex items-start gap-2">
+                            <CheckCircle className="mt-0.5 h-4 w-4 text-primary" />
+                            <span className="text-yellow-500">{requirement}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <label className="flex items-center gap-2 text-sm" htmlFor="requirements-confirmation">
+                        <Checkbox
+                          id="requirements-confirmation"
+                          checked={requirementsChecked}
+                          onCheckedChange={(value) => setRequirementsChecked(value === true)}
+                        />
+                        Saya memenuhi semua persyaratan di atas
+                      </label>
+                      {!requirementsChecked && (
+                        <p className="text-xs text-muted-foreground">
+                          Centang untuk melanjutkan pembayaran.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isPending || !user || (product.requirements && product.requirements.length > 0 && !requirementsChecked)}
+                  >
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Bayar Rp{product.price.toLocaleString('id-ID')}
                   </Button>

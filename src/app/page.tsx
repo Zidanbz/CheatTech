@@ -326,40 +326,60 @@ export default function Home() {
                       </CardContent>
                     </Card>
                   ))
-                : products?.map((product) => (
-                    <motion.div key={product.id} variants={itemVariants}>
-                      <Card>
-                        <CardContent className="p-0">
-                          <Image
-                            src={product.imageUrl}
-                            alt={product.name}
-                            width={400}
-                            height={300}
-                            className="rounded-t-lg w-full aspect-[4/3] object-cover"
-                            data-ai-hint="portfolio website"
-                          />
-                          <div className="p-4">
-                            <div className="flex justify-between items-start">
-                              <h3 className="font-bold text-lg">
-                                {product.name}
-                              </h3>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1 mb-4 h-10 line-clamp-2">
-                              {product.subheadline}
-                            </p>
-                            <div className="flex justify-between items-center">
-                              <p className="font-bold">
-                                Rp {product.price.toLocaleString('id-ID')}
-                              </p>
-                              <Button variant="outline" size="sm" asChild>
-                                <Link href={`/produk/${product.id}`}>Detail</Link>
-                              </Button>
-                            </div>
+                : products?.map((product) => {
+                    const hasDiscount =
+                      typeof product.originalPrice === 'number' &&
+                      product.originalPrice > product.price;
+                    return (
+                      <motion.div key={product.id} variants={itemVariants}>
+                        <Card>
+                          <CardContent className="p-0">
+                          <div className="relative w-full aspect-[4/3] overflow-hidden rounded-t-lg">
+                            <Image
+                              src={product.imageUrl}
+                              alt={product.name}
+                              fill
+                              sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                              className="object-cover"
+                              data-ai-hint="portfolio website"
+                            />
                           </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
+                            <div className="p-4">
+                              <div className="flex justify-between items-start">
+                                <h3 className="font-bold text-lg">
+                                  {product.name}
+                                </h3>
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1 h-10 line-clamp-2">
+                                {product.subheadline}
+                              </p>
+                              {product.requirements && product.requirements.length > 0 && (
+                                <p className="text-xs text-yellow-500 mt-2 line-clamp-2">
+                                  Persyaratan: {product.requirements.slice(0, 2).join(', ')}
+                                  {product.requirements.length > 2 && ` +${product.requirements.length - 2} lainnya`}
+                                </p>
+                              )}
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2 leading-tight">
+                                  {hasDiscount && (
+                                    <span className="text-xs text-blue-600 line-through">
+                                      Rp {product.originalPrice.toLocaleString('id-ID')}
+                                    </span>
+                                  )}
+                                  <span className="font-bold">
+                                    Rp {product.price.toLocaleString('id-ID')}
+                                  </span>
+                                </div>
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link href={`/produk/${product.id}`}>Detail</Link>
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
             </motion.div>
           </div>
         </section>
@@ -428,60 +448,6 @@ export default function Home() {
                       </p>
                     </motion.div>
                   ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Pricing Section */}
-        <section id="harga" className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, amount: 0.5 }}
-              transition={{ duration: 0.5 }}
-            >
-              <Card className="max-w-sm mx-auto shadow-xl rounded-lg overflow-hidden">
-                <CardContent className="p-0 text-center">
-                  <div className="bg-primary text-primary-foreground p-6">
-                    <h3 className="font-semibold">Single Template</h3>
-                    <p className="text-4xl font-bold mt-2">Rp 49rb</p>
-                    <p className="text-sm opacity-80">
-                      Harga per template, sekali bayar.
-                    </p>
-                  </div>
-                  <div className="p-6">
-                    <ul className="grid gap-3 text-left text-sm mb-6">
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Akses File 1 Template Pilihan
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Update Gratis Seumur Hidup
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Dokumentasi & Panduan Install
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Akses Source Code (React+Next.js)
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Siap Deploy (Mobile Friendly)
-                      </li>
-                    </ul>
-                    <Button asChild size="lg" className="w-full">
-                      <Link href="/produk">Pilih Template</Link>
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-4">
-                      Pilih template lainnya di atas untuk membeli.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
             </motion.div>
           </div>
         </section>

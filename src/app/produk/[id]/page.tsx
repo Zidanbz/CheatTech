@@ -85,6 +85,19 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           <Button asChild size="lg" className="w-full sm:w-auto">
             <Link href={`/checkout?productId=${product.id}`}>Beli Sekarang</Link>
           </Button>
+          {product.requirements && product.requirements.length > 0 && (
+            <div className="rounded-lg border p-4">
+              <h3 className="font-semibold">Persyaratan Sebelum Membeli</h3>
+              <ul className="mt-3 space-y-2 text-sm">
+                {product.requirements.map((requirement, index) => (
+                  <li key={`${requirement}-${index}`} className="flex items-start gap-2">
+                    <CheckCircle className="mt-0.5 h-4 w-4 text-primary" />
+                    <span className="text-yellow-500">{requirement}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
