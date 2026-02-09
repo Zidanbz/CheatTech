@@ -47,12 +47,23 @@ const optionalPriceSchema = z
   }, z.coerce.number().min(0, { message: 'Harga tidak boleh negatif.' }))
   .optional();
 
+const optionalUrlSchema = z
+  .preprocess((value) => {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed === '' ? undefined : trimmed;
+  }, z.string().url({ message: 'Masukkan URL demo yang valid.' }))
+  .optional();
+
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nama produk harus lebih dari 3 karakter.' }),
   headline: z.string().min(10, { message: 'Headline harus lebih dari 10 karakter.' }),
   subheadline: z.string().min(10, { message: 'Sub-headline harus lebih dari 10 karakter.' }),
   price: z.coerce.number().min(0, { message: 'Harga tidak boleh negatif.' }),
   originalPrice: optionalPriceSchema,
+  demoUrl: optionalUrlSchema,
   description: z.string().min(10, { message: 'Deskripsi harus memiliki setidaknya 10 karakter.' }),
   features: z.array(
     z.object({
@@ -114,6 +125,7 @@ export default function EditProductPage() {
       subheadline: '',
       price: 0,
       originalPrice: undefined,
+      demoUrl: '',
       description: '',
       features: [],
       requirements: defaultRequirements,
@@ -139,6 +151,7 @@ export default function EditProductPage() {
         subheadline: product.subheadline,
         price: product.price,
         originalPrice: product.originalPrice ?? undefined,
+        demoUrl: product.demoUrl ?? '',
         description: product.description,
         features: product.features.map((feature) => ({ value: feature })),
         requirements: product.requirements && product.requirements.length > 0
@@ -200,12 +213,14 @@ export default function EditProductPage() {
       }
 
       setSubmitStep('saving');
-      const { originalPrice, features, requirements, ...restValues } = values;
+      const { originalPrice, features, requirements, demoUrl, ...restValues } = values;
+      const normalizedDemoUrl = typeof demoUrl === 'string' ? demoUrl.trim() : '';
       const updatedValues = {
         ...restValues,
         features: features.map((feature) => feature.value),
         requirements: requirements.map((requirement) => requirement.value),
         imageUrl: finalImageUrl,
+        ...(normalizedDemoUrl ? { demoUrl: normalizedDemoUrl } : { demoUrl: deleteField() }),
         ...(typeof originalPrice === 'number' && originalPrice > 0
           ? { originalPrice }
           : { originalPrice: deleteField() }),
@@ -353,6 +368,28 @@ export default function EditProductPage() {
                       </FormControl>
                       <FormDescription>
                         Kosongkan jika tidak ingin menampilkan harga coret.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="demoUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL Demo</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://demo-template-anda.com"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Opsional. Jika diisi, tombol "Lihat Demo" akan membuka link ini.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

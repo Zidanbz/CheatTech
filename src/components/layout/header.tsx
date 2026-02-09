@@ -10,6 +10,7 @@ export default function Header() {
     { href: "/#keuntungan", label: "Keuntungan" },
     { href: "/#template", label: "Template" },
     { href: "/#cara-kerja", label: "Cara Kerja" },
+    { href: "/#custom", label: "Website Custom" },
   ];
 
   return (

@@ -1,46 +1,45 @@
 'use client';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { Button } from '@/components/ui/button';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import type { Product } from '@/lib/types';
-import { Loader2 } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { motion } from "framer-motion";
 
-export default function AllProductsPage() {
+export default function DemoPage() {
   const firestore = useFirestore();
+  const params = useParams();
+  const id = typeof params.id === 'string' ? params.id : params.id?.[0];
 
-  const productsQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'products'), where('active', '==', true))
-        : null,
-    [firestore]
+  const productRef = useMemoFirebase(
+    () => (firestore && id ? doc(firestore, 'products', id) : null),
+    [firestore, id]
   );
-  const { data: products, isLoading: isLoadingProducts } =
-    useCollection<Product>(productsQuery);
+  const { data: product, isLoading } = useDoc<Product>(productRef);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.5 },
-    },
-  };
+  if (!product) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-[60vh] text-center px-4">
+        <h2 className="text-2xl font-semibold">Demo Tidak Ditemukan</h2>
+        <p className="text-muted-foreground mt-2">Template tidak tersedia atau sudah dihapus.</p>
+        <Button asChild className="mt-6">
+          <Link href="/produk">Kembali ke Semua Template</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const demoUrl = product.demoUrl?.trim();
 
   return (
     <div className="relative overflow-hidden">
@@ -54,80 +53,56 @@ export default function AllProductsPage() {
         <div className="ct-site-ring ct-site-ring-1" />
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-12 md:px-6 md:py-16">
-          <div className="text-center mb-12">
-              <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl">Semua Template</h1>
-              <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
-                  Jelajahi semua template portofolio profesional kami yang siap pakai.
-              </p>
+      <div className="relative z-10 container mx-auto px-4 py-10 md:px-6 md:py-14">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Demo: {product.name}
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Preview langsung tampilan template sebelum membeli.
+            </p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link href={`/produk/${product.id}`}>Kembali ke Detail</Link>
+            </Button>
+            {demoUrl && (
+              <Button asChild>
+                <a href={demoUrl} target="_blank" rel="noreferrer">Buka Demo</a>
+              </Button>
+            )}
+          </div>
+        </div>
 
-          {isLoadingProducts ? (
-              <div className="flex justify-center items-center h-64">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <div className="mt-8">
+          {demoUrl ? (
+            <>
+              <div className="relative w-full aspect-video overflow-hidden rounded-xl border bg-background/60 shadow-lg">
+                <iframe
+                  src={demoUrl}
+                  title={`Demo ${product.name}`}
+                  className="h-full w-full"
+                  loading="lazy"
+                  allow="fullscreen"
+                />
               </div>
+              <p className="text-sm text-muted-foreground mt-3">
+                Jika demo tidak tampil karena pembatasan browser, gunakan tombol "Buka Demo".
+              </p>
+            </>
           ) : (
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
-              >
-                {products?.map((product) => (
-                  <motion.div key={product.id} variants={itemVariants}>
-                      <Card className="overflow-hidden transform transition-all hover:-translate-y-2 hover:shadow-2xl">
-                        <CardContent className="p-0">
-                          <Link href={`/produk/${product.id}`}>
-                            <div className="relative w-full aspect-[4/3] overflow-hidden">
-                              <Image
-                                src={product.imageUrl}
-                                alt={product.name}
-                                fill
-                                sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                                className="object-cover"
-                                data-ai-hint="portfolio website"
-                              />
-                            </div>
-                          </Link>
-                          <div className="p-4">
-                            <h3 className="font-bold text-lg truncate">
-                              {product.name}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mt-1 h-10 line-clamp-2">
-                              {product.subheadline}
-                            </p>
-                            {product.requirements && product.requirements.length > 0 && (
-                              <p className="text-xs text-yellow-500 mt-2 line-clamp-2">
-                                Persyaratan: {product.requirements.slice(0, 2).join(', ')}
-                                {product.requirements.length > 2 && ` +${product.requirements.length - 2} lainnya`}
-                              </p>
-                            )}
-                            <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                              <p className="font-bold text-xl">
-                                Rp {product.price.toLocaleString('id-ID')}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" asChild>
-                                  <Link href={`/demo/${product.id}`}>Lihat Demo</Link>
-                                </Button>
-                                <Button size="sm" asChild>
-                                  <Link href={`/checkout?productId=${product.id}`}>Beli Sekarang</Link>
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                  </motion.div>
-                ))}
-              </motion.div>
+            <div className="rounded-lg border border-dashed p-8 text-center bg-background/60">
+              <h2 className="text-xl font-semibold">Demo belum tersedia</h2>
+              <p className="text-muted-foreground mt-2">
+                Silakan kembali ke detail template untuk informasi lebih lanjut.
+              </p>
+              <Button variant="outline" className="mt-4" asChild>
+                <Link href={`/produk/${product.id}`}>Kembali ke Detail</Link>
+              </Button>
+            </div>
           )}
-           { !isLoadingProducts && products?.length === 0 && (
-              <div className="text-center py-16">
-                  <h2 className="text-2xl font-semibold">Belum Ada Produk</h2>
-                  <p className="text-muted-foreground mt-2">Silakan cek kembali nanti.</p>
-              </div>
-           )}
+        </div>
       </div>
 
       <style jsx>{`
