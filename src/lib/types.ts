@@ -12,6 +12,7 @@ export type Product = {
   originalPrice?: number;
   imageUrl: string;
   demoUrl?: string;
+  downloadUrl?: string;
   active: boolean;
 };
 
@@ -25,6 +26,19 @@ export type Order = {
   orderDate: Timestamp;
   userId: string;
   status: 'Completed' | 'Pending' | 'Processed';
+  fulfillmentMode?: 'self' | 'assisted';
+  deliveryStatus?: 'AwaitingPayment' | 'AwaitingSetup' | 'InProgress' | 'ReadyToDeliver' | 'Delivered';
+  customerNotes?: string;
+  invoiceNumber?: string;
+  paymentProvider?: 'midtrans';
+  paymentUrl?: string;
+  midtransToken?: string;
+  midtransTransactionId?: string;
+  midtransTransactionStatus?: string;
+  midtransPaymentType?: string;
+  midtransFraudStatus?: string;
+  processedAt?: Timestamp;
+  midtransNotificationRaw?: any;
 };
 
 export type Feature = {

@@ -64,6 +64,7 @@ const formSchema = z.object({
   price: z.coerce.number().min(0, { message: 'Harga tidak boleh negatif.' }),
   originalPrice: optionalPriceSchema,
   demoUrl: optionalUrlSchema,
+  downloadUrl: optionalUrlSchema,
   description: z.string().min(10, { message: 'Deskripsi harus memiliki setidaknya 10 karakter.' }),
   features: z.array(
     z.object({
@@ -126,6 +127,7 @@ export default function EditProductPage() {
       price: 0,
       originalPrice: undefined,
       demoUrl: '',
+      downloadUrl: '',
       description: '',
       features: [],
       requirements: defaultRequirements,
@@ -152,6 +154,7 @@ export default function EditProductPage() {
         price: product.price,
         originalPrice: product.originalPrice ?? undefined,
         demoUrl: product.demoUrl ?? '',
+        downloadUrl: product.downloadUrl ?? '',
         description: product.description,
         features: product.features.map((feature) => ({ value: feature })),
         requirements: product.requirements && product.requirements.length > 0
@@ -215,12 +218,14 @@ export default function EditProductPage() {
       setSubmitStep('saving');
       const { originalPrice, features, requirements, demoUrl, ...restValues } = values;
       const normalizedDemoUrl = typeof demoUrl === 'string' ? demoUrl.trim() : '';
+      const normalizedDownloadUrl = typeof values.downloadUrl === 'string' ? values.downloadUrl.trim() : '';
       const updatedValues = {
         ...restValues,
         features: features.map((feature) => feature.value),
         requirements: requirements.map((requirement) => requirement.value),
         imageUrl: finalImageUrl,
         ...(normalizedDemoUrl ? { demoUrl: normalizedDemoUrl } : { demoUrl: deleteField() }),
+        ...(normalizedDownloadUrl ? { downloadUrl: normalizedDownloadUrl } : { downloadUrl: deleteField() }),
         ...(typeof originalPrice === 'number' && originalPrice > 0
           ? { originalPrice }
           : { originalPrice: deleteField() }),
@@ -390,6 +395,28 @@ export default function EditProductPage() {
                       </FormControl>
                       <FormDescription>
                         Opsional. Jika diisi, tombol "Lihat Demo" akan membuka link ini.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="downloadUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL Download / File Zip</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://storage.example.com/template.zip"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Link ini dikirim otomatis untuk pembeli yang memilih setup sendiri.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

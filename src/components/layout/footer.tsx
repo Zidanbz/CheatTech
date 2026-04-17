@@ -2,51 +2,109 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden border-t border-white/10 bg-[#060a16] text-slate-200">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_15%_10%,rgba(56,189,248,0.18),transparent_70%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(50%_50%_at_85%_20%,rgba(34,197,94,0.16),transparent_65%)]" />
-        <div className="absolute -top-24 left-1/4 h-64 w-64 rounded-full bg-cyan-400/20 blur-3xl" />
-        <div className="absolute -bottom-28 right-0 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(148,163,184,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.1)_1px,transparent_1px)] [background-size:48px_48px]" />
-      </div>
+    <footer className="relative overflow-hidden bg-[linear-gradient(90deg,#2f4c69_0%,#a1e0ff_55%,#edf8fe_100%)]">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-3 bg-[#000c26]"
+      />
 
-      <div className="relative z-10 container py-14">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          <div className="col-span-2 md:col-span-1">
-            <h3 className="font-bold text-lg mb-2 bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">
-              CheatTech
-            </h3>
-            <p className="text-sm text-slate-300/90">
-              Platform penyedia template website portofolio berkualitas untuk talenta digital Indonesia.
+      <div className="container pb-10 pt-12">
+        <div className="grid gap-10 md:grid-cols-[1.6fr_1fr_1fr_1fr] md:gap-14">
+          <div className="max-w-sm text-white">
+            <h3 className="text-2xl font-semibold tracking-tight">CheatTech</h3>
+            <p className="mt-2 text-sm leading-relaxed text-white/75">
+              Platform penyedia template website portofolio berkualitas untuk
+              talenta digital Indonesia.
             </p>
+
+            <div className="mt-10">
+              <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-6 py-2 text-sm text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] backdrop-blur">
+                © {new Date().getFullYear()} CheatTech. All rights reserved.
+              </div>
+            </div>
           </div>
-          <div>
-            <h4 className="font-semibold mb-3 text-slate-100">Produk</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/produk" className="text-slate-300 hover:text-cyan-300 transition-colors">Semua Template</Link></li>
-              <li><Link href="#" className="text-slate-300 hover:text-cyan-300 transition-colors">Paket Bundle</Link></li>
-              <li><Link href="#" className="text-slate-300 hover:text-cyan-300 transition-colors">Jasa Setup</Link></li>
+
+          <div className="text-white md:text-[#001b3c]">
+            <h4 className="text-sm font-semibold tracking-wide">Produk</h4>
+            <ul className="mt-4 space-y-2 text-sm">
+              <li>
+                <Link
+                  href="/produk"
+                  className="text-white/75 transition-colors hover:text-white md:text-[#001b3c]/80 md:hover:text-[#001b3c]"
+                >
+                  Semua Template
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#"
+                  className="text-white/75 transition-colors hover:text-white md:text-[#001b3c]/80 md:hover:text-[#001b3c]"
+                >
+                  Paket Bundle
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#"
+                  className="text-white/75 transition-colors hover:text-white md:text-[#001b3c]/80 md:hover:text-[#001b3c]"
+                >
+                  Jasa Setup
+                </Link>
+              </li>
             </ul>
           </div>
-          <div>
-            <h4 className="font-semibold mb-3 text-slate-100">Support</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="#" className="text-slate-300 hover:text-cyan-300 transition-colors">Panduan Instalasi</Link></li>
-              <li><Link href="#" className="text-slate-300 hover:text-cyan-300 transition-colors">FAQ</Link></li>
-              <li><Link href="#" className="text-slate-300 hover:text-cyan-300 transition-colors">Hubungi Kami</Link></li>
+
+          <div className="text-white md:text-[#001b3c]">
+            <h4 className="text-sm font-semibold tracking-wide">Support</h4>
+            <ul className="mt-4 space-y-2 text-sm">
+              <li>
+                <Link
+                  href="#"
+                  className="text-white/75 transition-colors hover:text-white md:text-[#001b3c]/80 md:hover:text-[#001b3c]"
+                >
+                  Panduan Instalasi
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#"
+                  className="text-white/75 transition-colors hover:text-white md:text-[#001b3c]/80 md:hover:text-[#001b3c]"
+                >
+                  FAQ
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#"
+                  className="text-white/75 transition-colors hover:text-white md:text-[#001b3c]/80 md:hover:text-[#001b3c]"
+                >
+                  Hubungi Kami
+                </Link>
+              </li>
             </ul>
           </div>
-          <div>
-            <h4 className="font-semibold mb-3 text-slate-100">Legal</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="#" className="text-slate-300 hover:text-cyan-300 transition-colors">Ketentuan Layanan</Link></li>
-              <li><Link href="#" className="text-slate-300 hover:text-cyan-300 transition-colors">Kebijakan Privasi</Link></li>
+
+          <div className="text-white md:text-[#001b3c]">
+            <h4 className="text-sm font-semibold tracking-wide">Legal</h4>
+            <ul className="mt-4 space-y-2 text-sm">
+              <li>
+                <Link
+                  href="#"
+                  className="text-white/75 transition-colors hover:text-white md:text-[#001b3c]/80 md:hover:text-[#001b3c]"
+                >
+                  Ketentuan Layanan
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#"
+                  className="text-white/75 transition-colors hover:text-white md:text-[#001b3c]/80 md:hover:text-[#001b3c]"
+                >
+                  Kebijakan Privasi
+                </Link>
+              </li>
             </ul>
           </div>
-        </div>
-        <div className="mt-10 border-t border-white/10 pt-6 text-center text-sm text-slate-400">
-          <p>(c) {new Date().getFullYear()} CheatTech. All rights reserved.</p>
         </div>
       </div>
     </footer>

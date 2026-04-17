@@ -1,17 +1,36 @@
 'use client';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { Product } from '@/lib/types';
-import { Loader2 } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
+import { Loader2, Search } from "lucide-react";
 import { motion } from "framer-motion";
+import ProductCard from "@/components/products/product-card";
+import { useMemo, useState } from 'react';
+
+const CATEGORY_ORDER = ['Karir', 'Portfolio', 'Industri', 'Belanja'] as const;
+type ProductCategory = (typeof CATEGORY_ORDER)[number];
+
+function detectProductCategories(product: Product): ProductCategory[] {
+  const haystack = `${product.name} ${product.headline} ${product.subheadline}`.toLowerCase();
+  const categories: ProductCategory[] = [];
+
+  if (/karir|career|cv|resume|job|personal/i.test(haystack)) categories.push('Karir');
+  if (/portfolio|portofolio|agency|creative|freelance|designer/i.test(haystack))
+    categories.push('Portfolio');
+  if (/industri|corporate|company|saas|startup|business|b2b/i.test(haystack))
+    categories.push('Industri');
+  if (/belanja|shop|store|ecommerce|e-commerce|produk|catalog/i.test(haystack))
+    categories.push('Belanja');
+
+  if (categories.length === 0) categories.push('Portfolio');
+  return categories;
+}
 
 export default function AllProductsPage() {
   const firestore = useFirestore();
+  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'Semua'>('Semua');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const productsQuery = useMemoFirebase(
     () =>
@@ -22,6 +41,31 @@ export default function AllProductsPage() {
   );
   const { data: products, isLoading: isLoadingProducts } =
     useCollection<Product>(productsQuery);
+
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    return (products ?? []).filter((product) => {
+      const categoryMatch =
+        selectedCategory === 'Semua' ||
+        detectProductCategories(product).includes(selectedCategory);
+      const searchMatch =
+        normalizedSearch.length === 0 ||
+        `${product.name} ${product.headline} ${product.subheadline}`
+          .toLowerCase()
+          .includes(normalizedSearch);
+
+      return categoryMatch && searchMatch;
+    });
+  }, [products, searchTerm, selectedCategory]);
+
+  const productsByCategory = useMemo(() => {
+    return CATEGORY_ORDER.map((category) => ({
+      category,
+      items: filteredProducts.filter((product) =>
+        detectProductCategories(product).includes(category)
+      ),
+    })).filter((group) => group.items.length > 0);
+  }, [filteredProducts]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -43,23 +87,61 @@ export default function AllProductsPage() {
   };
 
   return (
-    <div className="relative overflow-hidden">
-      <div className="ct-site-bg" aria-hidden="true">
-        <div className="ct-site-gradient" />
-        <div className="ct-site-grid" />
-        <div className="ct-site-orb ct-site-orb-1" />
-        <div className="ct-site-orb ct-site-orb-2" />
-        <div className="ct-site-prism ct-site-prism-1" />
-        <div className="ct-site-prism ct-site-prism-2" />
-        <div className="ct-site-ring ct-site-ring-1" />
-      </div>
-
-      <div className="relative z-10 container mx-auto px-4 py-12 md:px-6 md:py-16">
-          <div className="text-center mb-12">
-              <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl">Semua Template</h1>
-              <p className="max-w-2xl mx-auto mt-4 text-muted-foreground md:text-xl/relaxed">
+    <div className="relative overflow-hidden bg-[#000C26]">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          backgroundColor: "#000C26",
+          backgroundImage:
+            "radial-gradient(52% 70% at 112% 34%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.14) 30%, rgba(255,255,255,0.04) 48%, rgba(255,255,255,0) 68%)",
+        }}
+      />
+      <div className="relative z-10 container mx-auto px-4 pb-12 pt-24 md:px-6 md:pb-16 md:pt-28">
+          <div className="mb-12">
+              <h1 className="text-4xl font-bold tracking-tighter text-white sm:text-5xl">Semua Template</h1>
+              <p className="mt-4 max-w-2xl text-blue-100/90 md:text-xl/relaxed">
                   Jelajahi semua template portofolio profesional kami yang siap pakai.
               </p>
+
+              <div className="mt-8">
+                <p className="text-sm font-semibold uppercase tracking-wide text-white">
+                  Telusur berdasarkan kategori
+                </p>
+
+                <div className="mt-3 max-w-md">
+                  <label className="relative block">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-100/70" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Cari template..."
+                      className="h-10 w-full rounded-full border border-white/20 bg-white/10 pl-10 pr-4 text-sm text-white outline-none placeholder:text-blue-100/70 focus:border-white/45"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(['Semua', ...CATEGORY_ORDER] as const).map((category) => {
+                    const isActive = selectedCategory === category;
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setSelectedCategory(category)}
+                        className={`inline-flex h-9 items-center rounded-full border px-5 text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'border-white/45 bg-white/20 text-white'
+                            : 'border-white/20 bg-white/10 text-blue-100 hover:bg-white/15'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
           </div>
 
           {isLoadingProducts ? (
@@ -67,247 +149,36 @@ export default function AllProductsPage() {
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
               </div>
           ) : (
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
-              >
-                {products?.map((product) => (
-                  <motion.div key={product.id} variants={itemVariants}>
-                      <Card className="overflow-hidden transform transition-all hover:-translate-y-2 hover:shadow-2xl">
-                        <CardContent className="p-0">
-                          <Link href={`/produk/${product.id}`}>
-                            <div className="relative w-full aspect-[4/3] overflow-hidden">
-                              <Image
-                                src={product.imageUrl}
-                                alt={product.name}
-                                fill
-                                sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                                className="object-cover"
-                                data-ai-hint="portfolio website"
-                              />
-                            </div>
-                          </Link>
-                          <div className="p-4">
-                            <h3 className="font-bold text-lg truncate">
-                              {product.name}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mt-1 h-10 line-clamp-2">
-                              {product.subheadline}
-                            </p>
-                            {product.requirements && product.requirements.length > 0 && (
-                              <p className="text-xs text-yellow-500 mt-2 line-clamp-2">
-                                Persyaratan: {product.requirements.slice(0, 2).join(', ')}
-                                {product.requirements.length > 2 && ` +${product.requirements.length - 2} lainnya`}
-                              </p>
-                            )}
-                            <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                              <p className="font-bold text-xl">
-                                Rp {product.price.toLocaleString('id-ID')}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" asChild>
-                                  <Link href={`/demo/${product.id}`}>Lihat Demo</Link>
-                                </Button>
-                                <Button size="sm" asChild>
-                                  <Link href={`/checkout?productId=${product.id}`}>Beli Sekarang</Link>
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+            <div className="space-y-12">
+              {productsByCategory.map((group) => (
+                <section key={group.category}>
+                  <h2 className="mb-5 text-3xl font-bold tracking-tight text-[#7ed0ff]">
+                    {group.category}
+                  </h2>
+                  <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {group.items.map((product) => (
+                      <motion.div key={product.id} variants={itemVariants}>
+                        <ProductCard product={product} />
+                      </motion.div>
+                    ))}
                   </motion.div>
-                ))}
-              </motion.div>
+                </section>
+              ))}
+            </div>
           )}
-           { !isLoadingProducts && products?.length === 0 && (
+           { !isLoadingProducts && filteredProducts.length === 0 && (
               <div className="text-center py-16">
-                  <h2 className="text-2xl font-semibold">Belum Ada Produk</h2>
-                  <p className="text-muted-foreground mt-2">Silakan cek kembali nanti.</p>
+                  <h2 className="text-2xl font-semibold text-white">Template tidak ditemukan</h2>
+                  <p className="mt-2 text-blue-100/80">Coba ubah kata pencarian atau pilih kategori lain.</p>
               </div>
            )}
       </div>
 
-      <style jsx>{`
-        .ct-site-bg {
-          position: absolute;
-          inset: -120px;
-          pointer-events: none;
-          z-index: 0;
-          overflow: hidden;
-          perspective: 1200px;
-        }
-
-        .ct-site-gradient {
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(60% 60% at 20% 20%, rgba(56, 189, 248, 0.2), transparent 70%),
-            radial-gradient(50% 50% at 80% 30%, rgba(34, 197, 94, 0.14), transparent 70%),
-            radial-gradient(60% 60% at 30% 80%, rgba(59, 130, 246, 0.18), transparent 70%);
-          opacity: 0.9;
-        }
-
-        .ct-site-grid {
-          position: absolute;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
-          background-size: 48px 48px;
-          mask-image: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.75), transparent 70%);
-          opacity: 0.35;
-        }
-
-        .ct-site-orb {
-          position: absolute;
-          border-radius: 9999px;
-          background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(59, 130, 246, 0.35) 45%, rgba(14, 165, 233, 0.12) 70%);
-          box-shadow: 0 40px 120px rgba(14, 165, 233, 0.22);
-          transform-style: preserve-3d;
-          mix-blend-mode: screen;
-          opacity: 0.7;
-        }
-
-        .ct-site-orb-1 {
-          width: 360px;
-          height: 360px;
-          top: -160px;
-          right: -120px;
-          animation: ct-site-float 14s ease-in-out infinite;
-        }
-
-        .ct-site-orb-2 {
-          width: 260px;
-          height: 260px;
-          bottom: -140px;
-          left: -80px;
-          animation: ct-site-float 16s ease-in-out infinite reverse;
-        }
-
-        .ct-site-prism {
-          position: absolute;
-          width: 240px;
-          height: 240px;
-          border-radius: 28px;
-          background: linear-gradient(145deg, rgba(148, 163, 184, 0.35), rgba(59, 130, 246, 0.1));
-          border: 1px solid rgba(148, 163, 184, 0.35);
-          box-shadow: 0 45px 90px rgba(15, 23, 42, 0.2);
-          transform-style: preserve-3d;
-          backdrop-filter: blur(2px);
-          opacity: 0.75;
-        }
-
-        .ct-site-prism::before {
-          content: '';
-          position: absolute;
-          inset: 14px;
-          border-radius: 22px;
-          background: linear-gradient(160deg, rgba(255, 255, 255, 0.5), rgba(59, 130, 246, 0.08));
-          transform: translateZ(-28px);
-          opacity: 0.7;
-        }
-
-        .ct-site-prism-1 {
-          top: 140px;
-          left: 6%;
-          animation: ct-site-tilt 18s ease-in-out infinite;
-        }
-
-        .ct-site-prism-2 {
-          bottom: 120px;
-          right: 8%;
-          width: 220px;
-          height: 220px;
-          animation: ct-site-tilt 22s ease-in-out infinite reverse;
-        }
-
-        .ct-site-ring {
-          position: absolute;
-          width: 320px;
-          height: 320px;
-          border-radius: 9999px;
-          border: 2px solid rgba(59, 130, 246, 0.25);
-          box-shadow: inset 0 0 40px rgba(14, 165, 233, 0.2);
-          transform: rotateX(68deg) rotateZ(25deg);
-          opacity: 0.6;
-          animation: ct-site-spin 26s linear infinite;
-        }
-
-        .ct-site-ring-1 {
-          top: 42%;
-          right: 28%;
-        }
-
-        @keyframes ct-site-float {
-          0% {
-            transform: translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg);
-          }
-          50% {
-            transform: translate3d(0, -24px, 10px) rotateX(12deg) rotateY(18deg);
-          }
-          100% {
-            transform: translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg);
-          }
-        }
-
-        @keyframes ct-site-tilt {
-          0% {
-            transform: rotateX(12deg) rotateY(-18deg) translate3d(0, 0, 0);
-          }
-          50% {
-            transform: rotateX(22deg) rotateY(8deg) translate3d(0, -18px, 12px);
-          }
-          100% {
-            transform: rotateX(12deg) rotateY(-18deg) translate3d(0, 0, 0);
-          }
-        }
-
-        @keyframes ct-site-spin {
-          0% {
-            transform: rotateX(68deg) rotateZ(0deg);
-          }
-          100% {
-            transform: rotateX(68deg) rotateZ(360deg);
-          }
-        }
-
-        @media (max-width: 768px) {
-          .ct-site-orb-1 {
-            width: 240px;
-            height: 240px;
-            top: -120px;
-            right: -140px;
-          }
-
-          .ct-site-orb-2 {
-            width: 200px;
-            height: 200px;
-            bottom: -120px;
-            left: -120px;
-          }
-
-          .ct-site-prism {
-            width: 200px;
-            height: 200px;
-          }
-
-          .ct-site-ring {
-            width: 220px;
-            height: 220px;
-            right: 12%;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .ct-site-orb,
-          .ct-site-prism,
-          .ct-site-ring {
-            animation: none;
-          }
-        }
-      `}</style>
     </div>
   );
 }

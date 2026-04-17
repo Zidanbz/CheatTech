@@ -55,6 +55,23 @@ const getStatusBadge = (status: Order['status']) => {
   }
 };
 
+const getDeliveryBadge = (deliveryStatus: Order['deliveryStatus']) => {
+  switch (deliveryStatus) {
+    case 'AwaitingSetup':
+      return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100/80">Awaiting Setup</Badge>;
+    case 'ReadyToDeliver':
+      return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100/80">Ready to Deliver</Badge>;
+    case 'Delivered':
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100/80">Delivered</Badge>;
+    case 'InProgress':
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100/80">In Progress</Badge>;
+    case 'AwaitingPayment':
+      return <Badge variant="secondary">Awaiting Payment</Badge>;
+    default:
+      return <Badge variant="secondary">-</Badge>;
+  }
+};
+
 
 export default function OrdersPage() {
   const firestore = useFirestore();
@@ -165,6 +182,8 @@ export default function OrdersPage() {
                 <TableHead>Pembeli</TableHead>
                 <TableHead>Produk yang Dibeli</TableHead>
                 <TableHead>Tanggal Transaksi</TableHead>
+                <TableHead>Fulfillment</TableHead>
+                <TableHead>Delivery</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">Aksi</TableHead>
               </TableRow>
@@ -172,7 +191,7 @@ export default function OrdersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-48">
+                  <TableCell colSpan={7} className="text-center h-48">
                     <div className="flex justify-center items-center">
                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
@@ -206,6 +225,12 @@ export default function OrdersPage() {
                       })} WIB
                     </TableCell>
                     <TableCell>
+                      <Badge variant="outline">{order.fulfillmentMode ?? 'self'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {getDeliveryBadge(order.deliveryStatus)}
+                    </TableCell>
+                    <TableCell>
                       {getStatusBadge(order.status)}
                     </TableCell>
                     <TableCell>
@@ -215,7 +240,7 @@ export default function OrdersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-48">
+                  <TableCell colSpan={7} className="text-center h-48">
                     Tidak ada pesanan ditemukan.
                   </TableCell>
                 </TableRow>

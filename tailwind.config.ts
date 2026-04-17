@@ -17,6 +17,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ["var(--font-sans)", "sans-serif"],
+        serif: ['"Times New Roman"', 'Times', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",

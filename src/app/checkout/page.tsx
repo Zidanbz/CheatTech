@@ -14,26 +14,25 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useTransition, useEffect, Suspense } from "react";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { useState, useEffect, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useFirestore, useUser } from "@/firebase";
-import { doc, getDoc, collection, Timestamp } from 'firebase/firestore';
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { doc, getDoc } from 'firebase/firestore';
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Nama harus memiliki setidaknya 2 karakter." }),
   email: z.string().email({ message: "Harap masukkan alamat email yang valid." }),
+  fulfillmentMode: z.enum(['self', 'assisted']).default('self'),
 });
 
 function CheckoutView() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
-  const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [requirementsChecked, setRequirementsChecked] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -74,6 +73,7 @@ function CheckoutView() {
     defaultValues: {
       name: "",
       email: "",
+      fulfillmentMode: 'self',
     },
   });
   
@@ -84,7 +84,7 @@ function CheckoutView() {
     }
   }, [user, form]);
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (product?.requirements && product.requirements.length > 0 && !requirementsChecked) {
       toast({
         title: "Persyaratan Belum Dipenuhi",
@@ -102,31 +102,56 @@ function CheckoutView() {
         return;
     }
 
-    startTransition(() => {
-        try {
-            const orderData = {
-              customerName: values.name,
-              customerEmail: values.email,
-              productId: product.id,
-              productName: product.name,
-              price: product.price,
-              orderDate: Timestamp.now(),
-              userId: user.uid,
-              status: 'Pending' as const,
-            };
-            const ordersCollection = collection(firestore, 'orders');
-            addDocumentNonBlocking(ordersCollection, orderData);
-            
-            router.push('/sukses');
-          } catch (e) {
-            console.error("Gagal membuat pesanan:", e);
-            toast({
-              title: "Terjadi Kesalahan",
-              description: "Gagal menyimpan pesanan. Silakan coba lagi.",
-              variant: "destructive",
-            });
-          }
-    });
+    try {
+      setIsSubmitting(true);
+      const token = user ? await user.getIdToken() : null;
+
+      const response = await fetch('/api/midtrans/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          productId: product.id,
+          customerName: values.name,
+          customerEmail: values.email,
+          fulfillmentMode: values.fulfillmentMode,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Gagal membuat transaksi Midtrans.' }));
+        toast({
+          title: 'Gagal Membuat Pembayaran',
+          description: error.message || 'Silakan coba lagi.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { redirectUrl } = await response.json();
+      if (!redirectUrl) {
+        toast({
+          title: 'Gagal Membuat Pembayaran',
+          description: 'URL pembayaran tidak tersedia.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.push(redirectUrl);
+    } catch (e) {
+      console.error('Gagal membuat pesanan:', e);
+      toast({
+        title: 'Terjadi Kesalahan',
+        description: 'Gagal membuat transaksi Midtrans. Silakan coba lagi.',
+        variant: 'destructive',
+      });
+      setIsSubmitting(false);
+    }
   }
 
   if (isUserLoading || isLoadingProduct) {
@@ -159,17 +184,16 @@ function CheckoutView() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl py-12 px-4">
-      <div className="grid md:grid-cols-2 gap-12">
+    <div className="container mx-auto max-w-5xl px-4 py-14 md:px-6 md:py-20">
+      <div className="grid gap-10 md:grid-cols-2 md:gap-16">
         <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Checkout</CardTitle>
-              <CardDescription>
-                Selesaikan pesanan Anda dengan mengisi formulir di bawah ini.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div className="rounded-[26px] border border-white/60 bg-[#b8e7ff]/70 px-8 py-7 shadow-[0_25px_70px_rgba(15,23,42,0.10)]">
+            <h1 className="text-2xl font-semibold text-[#000c26]">Checkout</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Selesaikan pesanan Anda dengan mengisi formulir di bawah ini.
+            </p>
+
+            <div className="mt-7">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <FormField
@@ -177,84 +201,120 @@ function CheckoutView() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nama Lengkap</FormLabel>
+                        <FormLabel className="text-sm font-semibold text-[#000c26]">
+                          Nama Lengkap
+                        </FormLabel>
                         <FormControl>
-                          <Input placeholder="John Doe" {...field} />
+                          <Input
+                            placeholder="Tazkirah"
+                            className="h-11 rounded-full border border-slate-500/35 bg-transparent px-5 text-slate-700 placeholder:text-slate-500 focus-visible:ring-[#000c26]/20"
+                            {...field}
+                          />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-xs" />
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel className="text-sm font-semibold text-[#000c26]">
+                          Email
+                        </FormLabel>
                         <FormControl>
-                          <Input placeholder="anda@email.com" {...field} />
+                          <Input
+                            placeholder="Tazkirah@gmail.com"
+                            className="h-11 rounded-full border border-slate-500/35 bg-transparent px-5 text-slate-700 placeholder:text-slate-500 focus-visible:ring-[#000c26]/20"
+                            {...field}
+                          />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-xs" />
                       </FormItem>
                     )}
                   />
+
                   {product.requirements && product.requirements.length > 0 && (
-                    <div className="rounded-lg border p-4 space-y-3">
-                      <div className="text-sm font-semibold">Persyaratan Pembelian</div>
-                      <ul className="space-y-2 text-sm">
+                    <div className="pt-2">
+                      <p className="text-sm font-semibold text-[#000c26]">
+                        Persyaratan Pembelian
+                      </p>
+                      <ul className="mt-3 space-y-1.5 pl-5 text-sm text-slate-600">
                         {product.requirements.map((requirement, index) => (
-                          <li key={`${requirement}-${index}`} className="flex items-start gap-2">
-                            <CheckCircle className="mt-0.5 h-4 w-4 text-primary" />
-                            <span className="text-yellow-500">{requirement}</span>
+                          <li key={`${requirement}-${index}`} className="list-disc">
+                            {requirement}
                           </li>
                         ))}
                       </ul>
-                      <label className="flex items-center gap-2 text-sm" htmlFor="requirements-confirmation">
+
+                      <label
+                        className="mt-4 flex items-center gap-3 text-sm text-red-500"
+                        htmlFor="requirements-confirmation"
+                      >
                         <Checkbox
                           id="requirements-confirmation"
                           checked={requirementsChecked}
                           onCheckedChange={(value) => setRequirementsChecked(value === true)}
+                          className="border-red-500 data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500"
                         />
                         Saya memenuhi semua persyaratan di atas
                       </label>
-                      {!requirementsChecked && (
-                        <p className="text-xs text-muted-foreground">
-                          Centang untuk melanjutkan pembayaran.
-                        </p>
-                      )}
                     </div>
                   )}
+
                   <Button
                     type="submit"
-                    className="w-full"
-                    disabled={isPending || !user || (product.requirements && product.requirements.length > 0 && !requirementsChecked)}
+                    className="mt-6 w-full rounded-full border border-[#000c26]/75 bg-[linear-gradient(90deg,#dcdedf_0%,#c0d5e0_50%,#a1cae0_100%)] text-base font-semibold text-[#000c26] shadow-[0_18px_45px_rgba(15,23,42,0.12)] hover:bg-[linear-gradient(90deg,#d7d9db_0%,#bbd0db_50%,#9bc3db_100%)]"
+                    disabled={
+                      isSubmitting ||
+                      !user ||
+                      (product.requirements && product.requirements.length > 0 && !requirementsChecked)
+                    }
                   >
-                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Bayar Rp{product.price.toLocaleString('id-ID')}
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Bayar
                   </Button>
                 </form>
               </Form>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
-        <div className="space-y-6">
-            <h2 className="text-2xl font-semibold">Ringkasan Pesanan</h2>
-            <Card>
-                <CardContent className="p-6">
-                    <div className="flex justify-between items-center">
-                        <span className="font-medium">{product.name}</span>
-                        <span className="font-bold">Rp{product.price.toLocaleString('id-ID')}</span>
-                    </div>
-                    <hr className="my-4"/>
-                    <div className="flex justify-between items-center font-bold text-lg">
-                        <span>Total</span>
-                        <span>Rp{product.price.toLocaleString('id-ID')}</span>
-                    </div>
-                </CardContent>
-            </Card>
-            <p className="text-xs text-foreground/60">
-              Dengan mengklik tombol bayar, Anda menyetujui Syarat dan Ketentuan kami. Anda akan diarahkan ke halaman pembayaran setelah ini.
-            </p>
+
+        <div>
+          <div className="rounded-[26px] border border-white/60 bg-[#b8e7ff]/70 px-8 py-7 shadow-[0_25px_70px_rgba(15,23,42,0.10)]">
+            <h2 className="text-2xl font-semibold text-[#000c26]">
+              Ringkasan Pesanan
+            </h2>
+            <div className="mt-3 h-px w-full bg-slate-700/70" />
+
+            <div className="mt-4 flex items-start justify-between gap-6">
+              <div>
+                <p className="text-sm text-slate-700">{product.name}</p>
+                {product.headline?.trim() && (
+                  <p className="text-sm text-slate-600">{product.headline}</p>
+                )}
+              </div>
+              <p className="text-base font-semibold text-[#000c26]">
+                Rp{product.price.toLocaleString('id-ID')}
+              </p>
+            </div>
+
+            <div className="mt-4 h-px w-full bg-slate-700/70" />
+
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-base font-semibold text-[#000c26]">Total :</p>
+              <p className="text-base font-semibold text-[#000c26]">
+                Rp{product.price.toLocaleString('id-ID')}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-6 max-w-sm text-xs text-slate-600">
+            Dengan mengklik tombol bayar, Anda menyetujui Syarat dan Ketentuan kami.
+            Anda akan diarahkan ke halaman pembayaran setelah ini.
+          </p>
         </div>
       </div>
     </div>

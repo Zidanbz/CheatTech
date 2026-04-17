@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    --font-sans: 'Montserrat';
     --background: 224 71.4% 4.1%;
     --foreground: 210 40% 98%;
     --card: 224 71.4% 4.1%;
@@ -31,7 +32,21 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans), sans-serif;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+
+  em,
+  i {
+    font-family: 'Times New Roman', Times, serif;
   }
 }
