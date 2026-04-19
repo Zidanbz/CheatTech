@@ -1,0 +1,10 @@
+<parameter name="content"># Fix Navbar Scroll Overlap
+
+## Steps:
+- [x] 1. Buat TODO.md dan konfirmasi plan ✅
+- [ ] 2. Edit src/app/layout.tsx: Tingkatkan main padding ke pt-28 md:pt-36
+- [ ] 3. Test npm run dev → navbar click + scroll top
+- [ ] 4. Update TODO + attempt_completion
+
+Current: Navbar fixed overlap content saat scroll to top setelah menu click.
+</parameter>

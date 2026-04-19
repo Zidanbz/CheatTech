@@ -45,3 +45,4 @@ firebase-debug.log
 firestore-debug.log
 *firebase-adminsdk*.json
 serviceAccountKey.json
+.env*.local
