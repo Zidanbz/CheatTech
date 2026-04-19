@@ -77,13 +77,6 @@ function CheckoutView() {
     },
   });
   
-  useEffect(() => {
-    if (user && !user.isAnonymous) {
-      form.setValue('name', user.displayName || '');
-      form.setValue('email', user.email || '');
-    }
-  }, [user, form]);
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (product?.requirements && product.requirements.length > 0 && !requirementsChecked) {
       toast({
@@ -205,11 +198,11 @@ function CheckoutView() {
                           Nama Lengkap
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Tazkirah"
-                            className="h-11 rounded-full border border-slate-500/35 bg-transparent px-5 text-slate-700 placeholder:text-slate-500 focus-visible:ring-[#000c26]/20"
-                            {...field}
-                          />
+	                          <Input
+	                            placeholder="Contoh: Budi Santoso"
+	                            className="h-11 rounded-full border border-slate-500/35 bg-transparent px-5 text-slate-700 placeholder:text-slate-500 focus-visible:ring-[#000c26]/20"
+	                            {...field}
+	                          />
                         </FormControl>
                         <FormMessage className="text-xs" />
                       </FormItem>
@@ -225,11 +218,11 @@ function CheckoutView() {
                           Email
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Tazkirah@gmail.com"
-                            className="h-11 rounded-full border border-slate-500/35 bg-transparent px-5 text-slate-700 placeholder:text-slate-500 focus-visible:ring-[#000c26]/20"
-                            {...field}
-                          />
+	                          <Input
+	                            placeholder="Contoh: budi.santoso@gmail.com"
+	                            className="h-11 rounded-full border border-slate-500/35 bg-transparent px-5 text-slate-700 placeholder:text-slate-500 focus-visible:ring-[#000c26]/20"
+	                            {...field}
+	                          />
                         </FormControl>
                         <FormMessage className="text-xs" />
                       </FormItem>
