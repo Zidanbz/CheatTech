@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb, firebaseAdminCredential } from '@/lib/firebase-admin';
 import { createMidtransTransaction, MidtransTransactionPayload } from '@/lib/midtrans';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -7,6 +7,19 @@ export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
+    if (process.env.NODE_ENV === 'production' && !firebaseAdminCredential.hasCredential) {
+      console.error('Firebase Admin credential missing in production', {
+        source: firebaseAdminCredential.source,
+      });
+      return NextResponse.json(
+        {
+          message:
+            'Server misconfigured: Firebase Admin credential is missing. Set FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 (recommended) or FIREBASE_SERVICE_ACCOUNT_JSON in Vercel Environment Variables.',
+        },
+        { status: 500 },
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     let authUid: string | null = null;
 

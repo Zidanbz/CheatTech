@@ -4,8 +4,16 @@ import { getAuth } from 'firebase-admin/auth';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Buffer } from 'node:buffer';
+import { firebaseConfig } from '@/firebase/config';
 
 let firebaseAdminApp = getApps()[0];
+
+type AdminCredentialSource = 'env_base64' | 'env_json' | 'env_path' | 'google_application_credentials' | 'local_file' | null;
+
+export const firebaseAdminCredential = {
+  hasCredential: false,
+  source: null as AdminCredentialSource,
+};
 
 function stripJsonFence(input: string) {
   const trimmed = input.trim();
@@ -70,41 +78,56 @@ function findLocalServiceAccountFile(): string | null {
   }
 }
 
-function getServiceAccount(): ServiceAccount | null {
+function getServiceAccount(): { serviceAccount: ServiceAccount | null; source: AdminCredentialSource } {
   const envJsonBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 || '';
   if (envJsonBase64) {
     try {
       const decoded = Buffer.from(envJsonBase64, 'base64').toString('utf8');
       const fromEnvBase64 = toServiceAccount(parseServiceAccountJson(decoded));
-      if (fromEnvBase64) return fromEnvBase64;
+      if (fromEnvBase64) return { serviceAccount: fromEnvBase64, source: 'env_base64' };
     } catch {
       // ignore and continue to other sources
     }
   }
 
   const fromEnvJson = toServiceAccount(parseServiceAccountJson(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || ''));
-  if (fromEnvJson) return fromEnvJson;
+  if (fromEnvJson) return { serviceAccount: fromEnvJson, source: 'env_json' };
 
   const explicitPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (explicitPath) {
     const fromPath = toServiceAccount(tryReadJsonFile(explicitPath));
-    if (fromPath) return fromPath;
+    if (fromPath) {
+      return {
+        serviceAccount: fromPath,
+        source: process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'google_application_credentials' : 'env_path',
+      };
+    }
   }
 
   const localFile = findLocalServiceAccountFile();
   if (localFile) {
     const fromLocal = toServiceAccount(tryReadJsonFile(localFile));
-    if (fromLocal) return fromLocal;
+    if (fromLocal) return { serviceAccount: fromLocal, source: 'local_file' };
   }
 
-  return null;
+  return { serviceAccount: null, source: null };
 }
 
 if (!firebaseAdminApp) {
-  const serviceAccount = getServiceAccount();
-  const options: AppOptions = serviceAccount
-    ? { credential: cert(serviceAccount) }
-    : {};
+  const { serviceAccount, source } = getServiceAccount();
+
+  firebaseAdminCredential.hasCredential = Boolean(serviceAccount);
+  firebaseAdminCredential.source = source;
+
+  if (serviceAccount?.projectId && firebaseConfig?.projectId && serviceAccount.projectId !== firebaseConfig.projectId) {
+    console.warn('Firebase Admin projectId mismatch', {
+      adminProjectId: serviceAccount.projectId,
+      clientProjectId: firebaseConfig.projectId,
+      source,
+    });
+  }
+
+  const options: AppOptions = serviceAccount ? { credential: cert(serviceAccount) } : {};
   firebaseAdminApp = initializeApp(options);
 }
 
