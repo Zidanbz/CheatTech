@@ -16,6 +16,10 @@ export async function POST(request: NextRequest) {
         const decoded = await adminAuth.verifyIdToken(token);
         authUid = decoded.uid;
       } catch (error) {
+        console.error('verifyIdToken failed', {
+          message: (error as any)?.message,
+          code: (error as any)?.code,
+        });
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
       }
     }

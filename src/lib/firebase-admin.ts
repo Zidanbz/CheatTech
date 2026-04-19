@@ -3,6 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import fs from 'node:fs';
 import path from 'node:path';
+import { Buffer } from 'node:buffer';
 
 let firebaseAdminApp = getApps()[0];
 
@@ -70,6 +71,17 @@ function findLocalServiceAccountFile(): string | null {
 }
 
 function getServiceAccount(): ServiceAccount | null {
+  const envJsonBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 || '';
+  if (envJsonBase64) {
+    try {
+      const decoded = Buffer.from(envJsonBase64, 'base64').toString('utf8');
+      const fromEnvBase64 = toServiceAccount(parseServiceAccountJson(decoded));
+      if (fromEnvBase64) return fromEnvBase64;
+    } catch {
+      // ignore and continue to other sources
+    }
+  }
+
   const fromEnvJson = toServiceAccount(parseServiceAccountJson(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || ''));
   if (fromEnvJson) return fromEnvJson;
 
