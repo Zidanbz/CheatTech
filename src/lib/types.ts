@@ -12,7 +12,6 @@ export type Product = {
   originalPrice?: number;
   imageUrl: string;
   demoUrl?: string;
-  downloadUrl?: string;
   active: boolean;
 };
 

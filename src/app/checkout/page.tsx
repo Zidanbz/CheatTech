@@ -124,7 +124,7 @@ function CheckoutView() {
         return;
       }
 
-      const { redirectUrl } = await response.json();
+      const { redirectUrl, invoiceNumber } = await response.json();
       if (!redirectUrl) {
         toast({
           title: 'Gagal Membuat Pembayaran',
@@ -133,6 +133,24 @@ function CheckoutView() {
         });
         setIsSubmitting(false);
         return;
+      }
+
+      try {
+        if (invoiceNumber && typeof window !== 'undefined') {
+          const payload = JSON.stringify({
+            orderId: invoiceNumber,
+            name: values.name,
+            email: values.email,
+            productId: product.id,
+            productName: product.name,
+            mode: values.fulfillmentMode,
+            createdAt: Date.now(),
+          });
+          sessionStorage.setItem(`cheattech:checkout:order:${invoiceNumber}`, payload);
+          sessionStorage.setItem('cheattech:checkout:last', payload);
+        }
+      } catch {
+        // ignore storage errors (private mode / quota)
       }
 
       router.push(redirectUrl);
@@ -174,6 +192,16 @@ function CheckoutView() {
           <p>Mengarahkan Anda kembali...</p>
         </div>
       );
+  }
+
+  function formatRequirement(requirement: string) {
+    if (requirement === "Memiliki akun GitHub") {
+      return "Memiliki akun GitHub / akun gmail baru";
+    }
+    if (requirement === "Memiliki domain sendiri") {
+      return "Memiliki domain sendiri (opsional)";
+    }
+    return requirement;
   }
 
   return (
@@ -229,18 +257,18 @@ function CheckoutView() {
                     )}
                   />
 
-                  {product.requirements && product.requirements.length > 0 && (
-                    <div className="pt-2">
-                      <p className="text-sm font-semibold text-[#000c26]">
-                        Persyaratan Pembelian
-                      </p>
-                      <ul className="mt-3 space-y-1.5 pl-5 text-sm text-slate-600">
-                        {product.requirements.map((requirement, index) => (
-                          <li key={`${requirement}-${index}`} className="list-disc">
-                            {requirement}
-                          </li>
-                        ))}
-                      </ul>
+	                  {product.requirements && product.requirements.length > 0 && (
+	                    <div className="pt-2">
+	                      <p className="text-sm font-semibold text-[#000c26]">
+	                        Persyaratan Pembelian
+	                      </p>
+	                      <ul className="mt-3 space-y-1.5 pl-5 text-sm text-slate-600">
+	                        {product.requirements.map((requirement, index) => (
+	                          <li key={`${requirement}-${index}`} className="list-disc">
+	                            {formatRequirement(requirement)}
+	                          </li>
+	                        ))}
+	                      </ul>
 
                       <label
                         className="mt-4 flex items-center gap-3 text-sm text-red-500"
@@ -275,24 +303,27 @@ function CheckoutView() {
           </div>
         </div>
 
-        <div>
-          <div className="rounded-[26px] border border-white/60 bg-[#b8e7ff]/70 px-8 py-7 shadow-[0_25px_70px_rgba(15,23,42,0.10)]">
-            <h2 className="text-2xl font-semibold text-[#000c26]">
-              Ringkasan Pesanan
-            </h2>
-            <div className="mt-3 h-px w-full bg-slate-700/70" />
+	        <div>
+	          <div className="rounded-[26px] border border-white/60 bg-[#b8e7ff]/70 px-8 py-7 shadow-[0_25px_70px_rgba(15,23,42,0.10)]">
+	            <h2 className="text-2xl font-semibold text-[#000c26]">
+	              Ringkasan Pesanan
+	            </h2>
+	            <div className="mt-3 h-px w-full bg-slate-700/70" />
 
             <div className="mt-4 flex items-start justify-between gap-6">
-              <div>
-                <p className="text-sm text-slate-700">{product.name}</p>
-                {product.headline?.trim() && (
-                  <p className="text-sm text-slate-600">{product.headline}</p>
-                )}
-              </div>
-              <p className="text-base font-semibold text-[#000c26]">
-                Rp{product.price.toLocaleString('id-ID')}
-              </p>
-            </div>
+	              <div>
+	                <p className="text-sm text-slate-700">{product.name}</p>
+	                {product.headline?.trim() && (
+	                  <p className="text-sm text-slate-600">{product.headline}</p>
+	                )}
+	                <p className="mt-2 text-xs text-slate-600">
+	                  Sudah termasuk jasa penanganan / jasa setup.
+	                </p>
+	              </div>
+	              <p className="text-base font-semibold text-[#000c26]">
+	                Rp{product.price.toLocaleString('id-ID')}
+	              </p>
+	            </div>
 
             <div className="mt-4 h-px w-full bg-slate-700/70" />
 

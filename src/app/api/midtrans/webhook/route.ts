@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { verifyMidtransSignature } from '@/lib/midtrans';
 import { FieldValue } from 'firebase-admin/firestore';
-import { sendSelfSetupEmail } from '@/lib/mailer';
 
 export const runtime = 'nodejs';
 
@@ -54,7 +53,6 @@ export async function POST(request: NextRequest) {
 
   const orderData = orders.docs[0].data() as any;
   const fulfillmentMode = orderData?.fulfillmentMode as 'self' | 'assisted' | undefined;
-  const productId = orderData?.productId as string | undefined;
 
   switch (transactionStatus) {
     case 'capture':
@@ -94,29 +92,6 @@ export async function POST(request: NextRequest) {
     processedAt: FieldValue.serverTimestamp(),
     midtransNotificationRaw: payload,
   });
-
-  // Auto kirim email untuk mode setup mandiri setelah pembayaran sukses
-  if (status === 'Completed' && fulfillmentMode !== 'assisted' && productId && orderData?.customerEmail) {
-    try {
-      const productSnap = await adminDb.collection('products').doc(productId).get();
-      const productData = productSnap.data() as any;
-      const downloadUrl =
-        process.env.SELF_SETUP_DOWNLOAD_URL ||
-        productData?.downloadUrl ||
-        productData?.demoUrl ||
-        process.env.NEXT_PUBLIC_APP_URL ||
-        'http://localhost:3000';
-
-      await sendSelfSetupEmail({
-        to: orderData.customerEmail,
-        productName: productData?.name || 'Template',
-        orderId,
-        downloadUrl,
-      });
-    } catch (error) {
-      console.error('Failed sending self-setup email', error);
-    }
-  }
 
   return NextResponse.json({ ok: true });
 }

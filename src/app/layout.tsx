@@ -27,6 +27,9 @@ export default function RootLayout({
   const isAdminPage = pathname.startsWith('/admin');
   const isHome = pathname === '/';
   const isProductsPage = pathname.startsWith('/produk');
+  const rootStyle = {
+    ["--header-offset" as any]: isAdminPage ? "0px" : "96px",
+  };
   const pageBackdropClass = pathname.startsWith('/demo')
     ? 'bg-[linear-gradient(180deg,#87bfd8_0%,#8ad0ef_18%,#6aa2c2_52%,#4a718f_76%,#32506c_100%)]'
     : pathname === '/checkout'
@@ -36,7 +39,7 @@ export default function RootLayout({
         : null;
 
   return (
-    <html lang="id">
+    <html lang="id" style={rootStyle}>
       <head>
         <title>CheatTech - Website Portofolio Instan</title>
         <meta name="description" content="Website Portofolio Mahasiswa, Siap Online dalam 10 Menit." />

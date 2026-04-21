@@ -26,11 +26,36 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Harap masukkan alamat email yang valid.' }),
   password: z.string().min(6, { message: 'Password harus memiliki setidaknya 6 karakter.' }),
 });
+
+function getLoginErrorMessage(error: unknown): string {
+  const code =
+    error instanceof FirebaseError
+      ? error.code
+      : typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : undefined;
+
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'Email atau password salah.';
+    case 'auth/invalid-email':
+      return 'Format email tidak valid.';
+    case 'auth/too-many-requests':
+      return 'Terlalu banyak percobaan. Coba lagi beberapa saat.';
+    case 'auth/network-request-failed':
+      return 'Koneksi bermasalah. Coba cek internet Anda.';
+    default:
+      return 'Gagal login. Periksa kembali email dan password Anda.';
+  }
+}
 
 export default function AdminLoginPage() {
   const auth = useAuth();
@@ -42,8 +67,8 @@ export default function AdminLoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: 'admincheattech@gmail.com',
-      password: 'CheatTech12',
+      email: '',
+      password: '',
     },
   });
   
@@ -53,26 +78,25 @@ export default function AdminLoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-    try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      toast({
-        title: 'Login Berhasil',
-        description: 'Anda akan diarahkan ke dasbor admin.',
-      });
-      router.push('/admin');
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Login Gagal',
-        description: error.message || 'Email atau password salah.',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+	  async function onSubmit(values: z.infer<typeof formSchema>) {
+	    setIsSubmitting(true);
+	    try {
+	      await signInWithEmailAndPassword(auth, values.email, values.password);
+	      toast({
+	        title: 'Login Berhasil',
+	        description: 'Anda akan diarahkan ke dasbor admin.',
+	      });
+	      router.push('/admin');
+	    } catch (error: unknown) {
+	      toast({
+	        variant: 'destructive',
+	        title: 'Login Gagal',
+	        description: getLoginErrorMessage(error),
+	      });
+	    } finally {
+	      setIsSubmitting(false);
+	    }
+	  }
 
   if (isUserLoading || (user && !user.isAnonymous)) {
     return (
@@ -132,11 +156,11 @@ export default function AdminLoginPage() {
               </Button>
             </form>
           </Form>
-           <p className="mt-4 text-center text-xs text-muted-foreground">
-            Gunakan <strong>admincheattech@gmail.com</strong> dan password <strong>CheatTech12</strong> untuk login.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+	          <p className="mt-4 text-center text-xs text-muted-foreground">
+	            Gunakan email dan password akun admin Anda.
+	          </p>
+	        </CardContent>
+	      </Card>
+	    </div>
+	  );
 }

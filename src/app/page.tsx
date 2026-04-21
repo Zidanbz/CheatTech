@@ -15,7 +15,7 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import type { LandingPage, Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { ADMIN_WA_NUMBER, buildWhatsAppLink } from '@/lib/whatsapp';
+import { ADMIN_WA_NUMBER_DISPLAY, buildWhatsAppLink } from '@/lib/whatsapp';
 import bgLeftPattern from '../../assets/assets home page/bg_leftz.png';
 import bgRightPattern from '../../assets/assets home page/bg_rightz.png';
 import laptopMockup from '../../assets/assets home page/laptop.png';
@@ -826,7 +826,7 @@ export default function Home() {
                 <div className="flex items-center gap-3 text-white/75">
                   <CheckCircle className="h-5 w-5 text-white" />
                   <span className="text-sm md:text-base">
-                    WhatsApp aktif di +{ADMIN_WA_NUMBER}
+                    WhatsApp aktif di {ADMIN_WA_NUMBER_DISPLAY}
                   </span>
                 </div>
               </div>

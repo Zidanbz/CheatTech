@@ -32,9 +32,9 @@ import Image from 'next/image';
 import type { Product } from '@/lib/types';
 
 const defaultRequirements = [
-  { value: "Memiliki akun GitHub" },
+  { value: "Memiliki akun GitHub / akun gmail baru" },
   { value: "Memiliki akun Vercel" },
-  { value: "Memiliki domain sendiri" },
+  { value: "Memiliki domain sendiri (opsional)" },
 ];
 
 const optionalPriceSchema = z
@@ -63,7 +63,6 @@ const formSchema = z.object({
   price: z.coerce.number().min(0, { message: 'Harga tidak boleh negatif.' }),
   originalPrice: optionalPriceSchema,
   demoUrl: optionalUrlSchema,
-  downloadUrl: optionalUrlSchema,
   description: z.string().min(10, { message: 'Deskripsi harus memiliki setidaknya 10 karakter.' }),
   features: z.array(
     z.object({
@@ -117,7 +116,6 @@ export default function NewProductPage() {
       price: 49000,
       originalPrice: undefined,
       demoUrl: '',
-      downloadUrl: '',
       description: '',
       features: [
         { value: "Desain Modern & Responsif" },
@@ -190,14 +188,12 @@ export default function NewProductPage() {
       setSubmitStep('saving');
       const { originalPrice, features, requirements, demoUrl, ...restValues } = values;
       const normalizedDemoUrl = typeof demoUrl === 'string' ? demoUrl.trim() : '';
-      const normalizedDownloadUrl = typeof values.downloadUrl === 'string' ? values.downloadUrl.trim() : '';
       const newProduct: Omit<Product, 'id'> = {
         ...restValues,
         features: features.map((feature) => feature.value),
         requirements: requirements.map((requirement) => requirement.value),
         imageUrl: imageUrl,
         ...(normalizedDemoUrl ? { demoUrl: normalizedDemoUrl } : {}),
-        ...(normalizedDownloadUrl ? { downloadUrl: normalizedDownloadUrl } : {}),
         ...(typeof originalPrice === 'number' && originalPrice > 0 ? { originalPrice } : {}),
       };
       console.log('New product data:', newProduct);
@@ -345,28 +341,6 @@ export default function NewProductPage() {
                         </FormControl>
                         <FormDescription>
                           Opsional. Jika diisi, tombol "Lihat Demo" akan membuka link ini.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="downloadUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>URL Download / File Zip</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="url"
-                            placeholder="https://storage.example.com/template.zip"
-                            {...field}
-                            value={field.value ?? ''}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Link yang akan dikirim otomatis ke pembeli jika memilih setup sendiri.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
