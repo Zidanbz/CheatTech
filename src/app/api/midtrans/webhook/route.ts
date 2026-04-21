@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { verifyMidtransSignature } from '@/lib/midtrans';
 import { FieldValue } from 'firebase-admin/firestore';
+import { sendOrderReceiptEmail } from '@/lib/mailer';
+import { ADMIN_WA_NUMBER_DISPLAY, buildWhatsAppLink } from '@/lib/whatsapp';
 
 export const runtime = 'nodejs';
 
@@ -92,6 +94,70 @@ export async function POST(request: NextRequest) {
     processedAt: FieldValue.serverTimestamp(),
     midtransNotificationRaw: payload,
   });
+
+  if (status === 'Completed' && orderData?.customerEmail) {
+    const supportEmail = 'cheattech.id@gmail.com';
+    const waSupportMessage = [
+      'Halo CheatTech, saya butuh bantuan terkait pesanan.',
+      `Order ID: ${orderId}`,
+      orderData?.customerName ? `Nama: ${orderData.customerName}` : null,
+      orderData?.customerEmail ? `Email: ${orderData.customerEmail}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const supportWhatsAppLink = buildWhatsAppLink({ message: waSupportMessage });
+
+    const shouldSend = await adminDb.runTransaction(async (tx) => {
+      const snap = await tx.get(orderRef);
+      const fresh = snap.data() as any;
+      if (!fresh) return false;
+      if (fresh.receiptEmailSentAt) return false;
+      if (fresh.receiptEmailStatus === 'sending') {
+        const attemptedAtMs = typeof fresh.receiptEmailAttemptedAt?.toMillis === 'function'
+          ? fresh.receiptEmailAttemptedAt.toMillis()
+          : null;
+        const isStale = typeof attemptedAtMs === 'number' ? Date.now() - attemptedAtMs > 30 * 60 * 1000 : false;
+        if (!isStale) return false;
+      }
+      if (fresh.receiptEmailStatus === 'sent') return false;
+      tx.update(orderRef, {
+        receiptEmailStatus: 'sending',
+        receiptEmailAttemptedAt: FieldValue.serverTimestamp(),
+        receiptEmailLastError: FieldValue.delete(),
+      });
+      return true;
+    });
+
+    if (shouldSend) {
+      try {
+        await sendOrderReceiptEmail({
+          to: String(orderData.customerEmail),
+          customerName: String(orderData.customerName ?? '-'),
+          customerEmail: String(orderData.customerEmail),
+          orderId: String(orderId),
+          productName: String(orderData.productName ?? 'Produk'),
+          price: Number(orderData.price ?? 0),
+          paymentStatus: 'Paid',
+          supportEmail,
+          supportWhatsAppNumberDisplay: ADMIN_WA_NUMBER_DISPLAY,
+          supportWhatsAppLink,
+        });
+
+        await orderRef.update({
+          receiptEmailStatus: 'sent',
+          receiptEmailSentAt: FieldValue.serverTimestamp(),
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('Failed sending receipt email', { orderId, message });
+        await orderRef.update({
+          receiptEmailStatus: 'failed',
+          receiptEmailLastError: message,
+        });
+      }
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
