@@ -15,14 +15,11 @@ export function initializeFirebase() {
     // without arguments.
     let firebaseApp;
     try {
-      // Attempt to initialize via Firebase App Hosting environment variables
-      firebaseApp = initializeApp();
-    } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-      }
+      // Firebase App Hosting provides __FIREBASE_DEFAULTS__ for automatic initialization.
+      // On other platforms (e.g. Vercel), calling initializeApp() without options throws app/no-options.
+      const hasDefaults = typeof (globalThis as any).__FIREBASE_DEFAULTS__ !== 'undefined';
+      firebaseApp = hasDefaults ? initializeApp() : initializeApp(firebaseConfig);
+    } catch {
       firebaseApp = initializeApp(firebaseConfig);
     }
 
