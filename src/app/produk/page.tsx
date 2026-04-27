@@ -6,30 +6,20 @@ import type { Product } from '@/lib/types';
 import { Loader2, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import ProductCard from "@/components/products/product-card";
-import { useMemo, useState } from 'react';
-
-const CATEGORY_ORDER = ['Karir', 'Portfolio', 'Industri', 'Belanja'] as const;
-type ProductCategory = (typeof CATEGORY_ORDER)[number];
-
-function detectProductCategories(product: Product): ProductCategory[] {
-  const haystack = `${product.name} ${product.headline} ${product.subheadline}`.toLowerCase();
-  const categories: ProductCategory[] = [];
-
-  if (/karir|career|cv|resume|job|personal/i.test(haystack)) categories.push('Karir');
-  if (/portfolio|portofolio|agency|creative|freelance|designer/i.test(haystack))
-    categories.push('Portfolio');
-  if (/industri|corporate|company|saas|startup|business|b2b/i.test(haystack))
-    categories.push('Industri');
-  if (/belanja|shop|store|ecommerce|e-commerce|produk|catalog/i.test(haystack))
-    categories.push('Belanja');
-
-  if (categories.length === 0) categories.push('Portfolio');
-  return categories;
-}
+import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  detectProductCategories,
+  parseProductCategory,
+  PRODUCT_CATEGORIES,
+  type ProductCategoryFilter,
+} from '@/lib/product-categories';
 
 export default function AllProductsPage() {
   const firestore = useFirestore();
-  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'Semua'>('Semua');
+  const pathname = usePathname();
+  const router = useRouter();
+  const [selectedCategory, setSelectedCategory] = useState<ProductCategoryFilter>('Semua');
   const [searchTerm, setSearchTerm] = useState('');
 
   const productsQuery = useMemoFirebase(
@@ -41,6 +31,51 @@ export default function AllProductsPage() {
   );
   const { data: products, isLoading: isLoadingProducts } =
     useCollection<Product>(productsQuery);
+
+  useEffect(() => {
+    const syncFiltersFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      setSelectedCategory(parseProductCategory(params.get('category')));
+      setSearchTerm(params.get('search') ?? '');
+    };
+
+    syncFiltersFromUrl();
+    window.addEventListener('popstate', syncFiltersFromUrl);
+
+    return () => {
+      window.removeEventListener('popstate', syncFiltersFromUrl);
+    };
+  }, []);
+
+  const updateFilters = (
+    nextCategory: ProductCategoryFilter,
+    nextSearchTerm: string
+  ) => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (nextCategory === 'Semua') {
+      params.delete('category');
+    } else {
+      const matchedCategory = PRODUCT_CATEGORIES.find(
+        (category) => category.label === nextCategory
+      );
+      if (matchedCategory) {
+        params.set('category', matchedCategory.slug);
+      }
+    }
+
+    const normalizedSearchTerm = nextSearchTerm.trim();
+    if (normalizedSearchTerm) {
+      params.set('search', normalizedSearchTerm);
+    } else {
+      params.delete('search');
+    }
+
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  };
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -59,13 +94,18 @@ export default function AllProductsPage() {
   }, [products, searchTerm, selectedCategory]);
 
   const productsByCategory = useMemo(() => {
-    return CATEGORY_ORDER.map((category) => ({
-      category,
+    return PRODUCT_CATEGORIES.map((category) => ({
+      category: category.label,
       items: filteredProducts.filter((product) =>
-        detectProductCategories(product).includes(category)
+        detectProductCategories(product).includes(category.label)
       ),
     })).filter((group) => group.items.length > 0);
   }, [filteredProducts]);
+
+  const categoryFilters = useMemo<ProductCategoryFilter[]>(
+    () => ['Semua', ...PRODUCT_CATEGORIES.map((category) => category.label)],
+    []
+  );
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -87,7 +127,7 @@ export default function AllProductsPage() {
   };
 
   return (
-    <div className="relative overflow-hidden bg-[#000C26]">
+    <div className="relative overflow-x-clip bg-[#000C26]">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0"
@@ -115,7 +155,11 @@ export default function AllProductsPage() {
                     <input
                       type="text"
                       value={searchTerm}
-                      onChange={(event) => setSearchTerm(event.target.value)}
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        setSearchTerm(nextValue);
+                        updateFilters(selectedCategory, nextValue);
+                      }}
                       placeholder="Cari template..."
                       className="h-10 w-full rounded-full border border-white/20 bg-white/10 pl-10 pr-4 text-sm text-white outline-none placeholder:text-blue-100/70 focus:border-white/45"
                     />
@@ -123,13 +167,16 @@ export default function AllProductsPage() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {(['Semua', ...CATEGORY_ORDER] as const).map((category) => {
+                  {categoryFilters.map((category) => {
                     const isActive = selectedCategory === category;
                     return (
                       <button
                         key={category}
                         type="button"
-                        onClick={() => setSelectedCategory(category)}
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          updateFilters(category, searchTerm);
+                        }}
                         className={`inline-flex h-9 items-center rounded-full border px-5 text-sm font-medium transition-colors ${
                           isActive
                             ? 'border-white/45 bg-white/20 text-white'

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Quote, Search, Star, Zap } from 'lucide-react';
 import Image from 'next/image';
@@ -20,6 +20,13 @@ import bgLeftPattern from '../../assets/assets home page/bg_leftz.png';
 import bgRightPattern from '../../assets/assets home page/bg_rightz.png';
 import laptopMockup from '../../assets/assets home page/laptop.png';
 import ProductCard from '@/components/products/product-card';
+import {
+  buildCategoryProductsHrefBySlug,
+  detectProductCategories,
+  findProductCategoryBySlug,
+  normalizeLandingPageShowcaseCategories,
+} from '@/lib/product-categories';
+import { scrollToSection } from '@/lib/scroll-to-section';
 
 const featureIconComponents = [CheckCircle, Zap, Search] as const;
 const ACTIVE_PRODUCTS_CACHE_KEY = 'cheattech-home-active-products';
@@ -202,12 +209,49 @@ export default function Home() {
   const isUsingCachedProducts =
     products === null && cachedProducts !== null && hasLoadedProductCache;
   const highlightedTestimonials = testimonials.slice(0, 2);
-  const showcaseCategories = [
-    { label: 'Karir', imageHint: 'career website' },
-    { label: 'Portofolio', imageHint: 'portfolio website' },
-    { label: 'Industri', imageHint: 'industrial website' },
-    { label: 'Belanja', imageHint: 'ecommerce website' },
-  ];
+  const showcaseCategoryConfigs = useMemo(
+    () => normalizeLandingPageShowcaseCategories(content?.showcaseCategories),
+    [content?.showcaseCategories]
+  );
+
+  const showcaseCategories = useMemo(() => {
+    return showcaseCategoryConfigs.map((category, index) => {
+      const mappedCategory = findProductCategoryBySlug(category.categorySlug);
+      const selectedProduct = category.productId
+        ? activeProducts.find((product) => product.id === category.productId)
+        : null;
+      const matchedProduct = mappedCategory
+        ? activeProducts.find((product) =>
+            detectProductCategories(product).includes(mappedCategory.label)
+          )
+        : null;
+
+      return {
+        ...category,
+        product: selectedProduct ?? matchedProduct ?? activeProducts[index] ?? null,
+      };
+    });
+  }, [activeProducts, showcaseCategoryConfigs]);
+
+  useEffect(() => {
+    const syncHashScroll = () => {
+      const sectionId = window.location.hash.replace(/^#/, "");
+      if (!sectionId) {
+        return;
+      }
+
+      window.requestAnimationFrame(() => {
+        scrollToSection(sectionId, "auto");
+      });
+    };
+
+    syncHashScroll();
+    window.addEventListener("hashchange", syncHashScroll);
+
+    return () => {
+      window.removeEventListener("hashchange", syncHashScroll);
+    };
+  }, []);
 
   return (
     <div className="relative overflow-hidden">
@@ -558,11 +602,24 @@ export default function Home() {
                     />
                   ))
                 : showcaseCategories.map((category, index) => {
-                    const product = activeProducts[index % activeProducts.length];
+                    const product = category.product;
+
+                    if (!product) {
+                      return (
+                        <div
+                          key={`${category.label}-${index}`}
+                          className="flex aspect-[1.38/1] items-center justify-center rounded-[28px] border border-white/10 bg-black/20 p-6 text-center text-white/80 shadow-[0_24px_70px_rgba(0,0,0,0.25)]"
+                        >
+                          Template untuk kategori {category.label} akan segera tersedia.
+                        </div>
+                      );
+                    }
+
                     return (
-                      <div
+                      <Link
                         key={`${category.label}-${product?.id ?? index}`}
-                        className="group relative aspect-[1.38/1] overflow-hidden rounded-[28px] border border-white/10 bg-black/20 shadow-[0_24px_70px_rgba(0,0,0,0.25)]"
+                        href={buildCategoryProductsHrefBySlug(category.categorySlug)}
+                        className="group relative block aspect-[1.38/1] overflow-hidden rounded-[28px] border border-white/10 bg-black/20 shadow-[0_24px_70px_rgba(0,0,0,0.25)]"
                       >
                         <Image
                           src={product.imageUrl}
@@ -578,7 +635,15 @@ export default function Home() {
                             {category.label}
                           </div>
                         </div>
-                      </div>
+                        <div className="absolute inset-x-0 bottom-0 p-5">
+                          <div className="rounded-2xl bg-black/35 px-4 py-3 backdrop-blur">
+                            <p className="text-sm text-white/65">Lihat template relevan</p>
+                            <p className="mt-1 text-base font-semibold text-white">
+                              {product.name}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
                     );
                   })}
             </motion.div>
@@ -835,7 +900,7 @@ export default function Home() {
         </section>
 
         {/* Testimonials */}
-        <section className="w-full py-16 md:py-24">
+        <section className="w-full pt-16 md:pt-24">
           <div className="container mx-auto px-4 md:px-6">
             <motion.div
               initial={{ opacity: 0, y: 26 }}

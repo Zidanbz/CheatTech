@@ -95,6 +95,30 @@ export async function POST(request: NextRequest) {
     midtransNotificationRaw: payload,
   });
 
+  if (status === 'Completed' && orderData?.voucherId) {
+    await adminDb.runTransaction(async (tx) => {
+      const freshOrderSnap = await tx.get(orderRef);
+      const freshOrder = freshOrderSnap.data() as any;
+
+      if (!freshOrder?.voucherId || freshOrder?.voucherUsageRecordedAt) {
+        return;
+      }
+
+      const voucherRef = adminDb.collection('vouchers').doc(String(freshOrder.voucherId));
+      const voucherSnap = await tx.get(voucherRef);
+
+      if (voucherSnap.exists) {
+        tx.update(voucherRef, {
+          usageCount: FieldValue.increment(1),
+        });
+      }
+
+      tx.update(orderRef, {
+        voucherUsageRecordedAt: FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
   if (status === 'Completed' && orderData?.customerEmail) {
     const supportEmail = 'cheattech.id@gmail.com';
     const waSupportMessage = [

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, firebaseAdminCredential } from '@/lib/firebase-admin';
 import { createMidtransTransaction, MidtransTransactionPayload } from '@/lib/midtrans';
 import { FieldValue } from 'firebase-admin/firestore';
+import {
+  normalizeVoucherCode,
+  validateVoucherForAmount,
+} from '@/lib/vouchers';
 
 export const runtime = 'nodejs';
 
@@ -38,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productId, customerName, customerEmail, fulfillmentMode } = body ?? {};
+    const { productId, customerName, customerEmail, fulfillmentMode, voucherCode } = body ?? {};
 
     if (!productId || !customerName || !customerEmail) {
       return NextResponse.json({ message: 'productId, customerName, and customerEmail are required.' }, { status: 400 });
@@ -52,7 +56,52 @@ export async function POST(request: NextRequest) {
     }
 
     const product = productSnap.data() as any;
-    const amount = Math.round(Number(product.price));
+    const originalAmount = Math.max(0, Math.round(Number(product.price)));
+    const normalizedVoucherCode = normalizeVoucherCode(voucherCode);
+    let discountAmount = 0;
+    let finalAmount = originalAmount;
+    let appliedVoucher:
+      | {
+          id: string;
+          code: string;
+          discountType: 'percentage' | 'fixed';
+          discountValue: number;
+        }
+      | null = null;
+
+    if (normalizedVoucherCode) {
+      const voucherQuery = await adminDb
+        .collection('vouchers')
+        .where('code', '==', normalizedVoucherCode)
+        .limit(1)
+        .get();
+
+      const voucher = voucherQuery.empty
+        ? null
+        : ({
+            id: voucherQuery.docs[0].id,
+            ...voucherQuery.docs[0].data(),
+          } as any);
+
+      const validation = validateVoucherForAmount(
+        voucher,
+        originalAmount,
+        normalizedVoucherCode
+      );
+
+      if (!validation.isValid) {
+        return NextResponse.json({ message: validation.message }, { status: 400 });
+      }
+
+      discountAmount = validation.discountAmount;
+      finalAmount = validation.finalAmount;
+      appliedVoucher = {
+        id: validation.voucher.id,
+        code: validation.voucher.code,
+        discountType: validation.voucher.discountType,
+        discountValue: validation.voucher.discountValue,
+      };
+    }
 
     const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`;
 
@@ -63,7 +112,7 @@ export async function POST(request: NextRequest) {
     const payload: MidtransTransactionPayload = {
       transaction_details: {
         order_id: invoiceNumber,
-        gross_amount: amount,
+        gross_amount: finalAmount,
       },
       customer_details: {
         first_name: customerName,
@@ -73,7 +122,7 @@ export async function POST(request: NextRequest) {
         {
           id: productId,
           name: product.name ?? 'Produk',
-          price: amount,
+          price: finalAmount,
           quantity: 1,
         },
       ],
@@ -103,17 +152,27 @@ export async function POST(request: NextRequest) {
       customerEmail,
       productId,
       productName: product.name ?? '',
-      price: amount,
+      price: finalAmount,
+      originalPrice: originalAmount,
+      discountAmount,
       orderDate: FieldValue.serverTimestamp(),
       userId: authUid ?? 'anonymous',
       status: 'Pending',
-       fulfillmentMode: mode,
-       deliveryStatus: 'AwaitingPayment',
+      fulfillmentMode: mode,
+      deliveryStatus: 'AwaitingPayment',
       invoiceNumber,
       paymentProvider: 'midtrans',
       paymentUrl,
       midtransToken: data?.token ?? null,
       midtransTransactionStatus: data?.transaction_status ?? 'pending',
+      ...(appliedVoucher
+        ? {
+            voucherId: appliedVoucher.id,
+            voucherCode: appliedVoucher.code,
+            voucherDiscountType: appliedVoucher.discountType,
+            voucherDiscountValue: appliedVoucher.discountValue,
+          }
+        : {}),
     });
 
     return NextResponse.json({ redirectUrl: paymentUrl, invoiceNumber });

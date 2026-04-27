@@ -22,6 +22,8 @@ export type Order = {
   productId: string;
   productName: string;
   price: number;
+  originalPrice?: number;
+  discountAmount?: number;
   orderDate: Timestamp;
   userId: string;
   status: 'Completed' | 'Pending' | 'Processed';
@@ -36,6 +38,10 @@ export type Order = {
   midtransTransactionStatus?: string;
   midtransPaymentType?: string;
   midtransFraudStatus?: string;
+  voucherId?: string;
+  voucherCode?: string;
+  voucherDiscountType?: 'percentage' | 'fixed';
+  voucherDiscountValue?: number;
   processedAt?: Timestamp;
   midtransNotificationRaw?: any;
 };
@@ -57,6 +63,13 @@ export type Testimonial = {
   avatar: string;
 };
 
+export type LandingPageShowcaseCategory = {
+  categorySlug: string;
+  label: string;
+  imageHint: string;
+  productId: string;
+};
+
 export type LandingPage = {
   id: string;
   heroHeadline: string;
@@ -73,6 +86,7 @@ export type LandingPage = {
   steps: Step[];
   testimonialsSectionHeadline: string;
   testimonials: Testimonial[];
+  showcaseCategories: LandingPageShowcaseCategory[];
 };
 
 export type Voucher = {

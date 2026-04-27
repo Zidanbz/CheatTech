@@ -33,7 +33,18 @@ function CheckoutView() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [requirementsChecked, setRequirementsChecked] = useState(false);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState<{
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    discountAmount: number;
+    finalAmount: number;
+    originalAmount: number;
+  } | null>(null);
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
@@ -76,6 +87,92 @@ function CheckoutView() {
       fulfillmentMode: 'self',
     },
   });
+
+  const subtotal = Math.max(0, Math.round(Number(product?.price) || 0));
+  const discountAmount = appliedVoucher?.discountAmount ?? 0;
+  const totalAmount = appliedVoucher?.finalAmount ?? subtotal;
+
+  function formatRupiah(amount: number) {
+    return `Rp${amount.toLocaleString('id-ID')}`;
+  }
+
+  async function applyVoucher() {
+    if (!product || !user) {
+      toast({
+        title: "Voucher Belum Bisa Digunakan",
+        description: "Silakan pastikan Anda sudah login dan produk sudah termuat.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const normalizedCode = voucherCode.trim().toUpperCase();
+    if (!normalizedCode) {
+      toast({
+        title: "Kode Voucher Kosong",
+        description: "Masukkan kode voucher terlebih dahulu.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsApplyingVoucher(true);
+      const token = await user.getIdToken();
+      const response = await fetch('/api/vouchers/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productId: product.id,
+          voucherCode: normalizedCode,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setAppliedVoucher(null);
+        toast({
+          title: 'Voucher Tidak Valid',
+          description: payload.message || 'Voucher tidak dapat digunakan.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setVoucherCode(payload.voucher.code);
+      setAppliedVoucher({
+        id: payload.voucher.id,
+        code: payload.voucher.code,
+        discountType: payload.voucher.discountType,
+        discountValue: payload.voucher.discountValue,
+        discountAmount: payload.pricing.discountAmount,
+        finalAmount: payload.pricing.finalAmount,
+        originalAmount: payload.pricing.originalAmount,
+      });
+      toast({
+        title: 'Voucher Berhasil Dipakai',
+        description: `${payload.voucher.code} memberi potongan ${formatRupiah(payload.pricing.discountAmount)}.`,
+      });
+    } catch (error) {
+      console.error('Gagal memvalidasi voucher:', error);
+      setAppliedVoucher(null);
+      toast({
+        title: 'Terjadi Kesalahan',
+        description: 'Gagal memvalidasi voucher. Silakan coba lagi.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  }
+
+  function removeVoucher() {
+    setAppliedVoucher(null);
+    setVoucherCode('');
+  }
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (product?.requirements && product.requirements.length > 0 && !requirementsChecked) {
@@ -110,6 +207,7 @@ function CheckoutView() {
           customerName: values.name,
           customerEmail: values.email,
           fulfillmentMode: values.fulfillmentMode,
+          voucherCode: appliedVoucher?.code ?? '',
         }),
       });
 
@@ -246,16 +344,69 @@ function CheckoutView() {
                           Email
                         </FormLabel>
                         <FormControl>
-	                          <Input
-	                            placeholder="Contoh: budi.santoso@gmail.com"
-	                            className="h-11 rounded-full border border-slate-500/35 bg-transparent px-5 text-slate-700 placeholder:text-slate-500 focus-visible:ring-[#000c26]/20"
-	                            {...field}
-	                          />
+                          <Input
+                            placeholder="Contoh: budi.santoso@gmail.com"
+                            className="h-11 rounded-full border border-slate-500/35 bg-transparent px-5 text-slate-700 placeholder:text-slate-500 focus-visible:ring-[#000c26]/20"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage className="text-xs" />
                       </FormItem>
                     )}
                   />
+
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#000c26]">
+                        Voucher
+                      </p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Masukkan kode promo jika Anda memilikinya.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={voucherCode}
+                        onChange={(event) => {
+                          const nextCode = event.target.value.toUpperCase();
+                          setVoucherCode(nextCode);
+                          if (appliedVoucher && nextCode.trim() !== appliedVoucher.code) {
+                            setAppliedVoucher(null);
+                          }
+                        }}
+                        placeholder="Contoh: PROMOHEMAT"
+                        className="h-11 rounded-full border border-slate-500/35 bg-transparent px-5 text-slate-700 placeholder:text-slate-500 focus-visible:ring-[#000c26]/20"
+                      />
+                      {appliedVoucher ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-11 rounded-full px-5"
+                          onClick={removeVoucher}
+                        >
+                          Hapus
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-11 rounded-full px-5"
+                          onClick={applyVoucher}
+                          disabled={isApplyingVoucher || !voucherCode.trim() || !user}
+                        >
+                          {isApplyingVoucher && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Terapkan
+                        </Button>
+                      )}
+                    </div>
+                    {appliedVoucher && (
+                      <p className="text-xs font-medium text-emerald-700">
+                        Voucher {appliedVoucher.code} aktif. Potongan {formatRupiah(appliedVoucher.discountAmount)}.
+                      </p>
+                    )}
+                  </div>
 
 	                  {product.requirements && product.requirements.length > 0 && (
 	                    <div className="pt-2">
@@ -310,7 +461,7 @@ function CheckoutView() {
 	            </h2>
 	            <div className="mt-3 h-px w-full bg-slate-700/70" />
 
-            <div className="mt-4 flex items-start justify-between gap-6">
+	            <div className="mt-4 flex items-start justify-between gap-6">
 	              <div>
 	                <p className="text-sm text-slate-700">{product.name}</p>
 	                {product.headline?.trim() && (
@@ -321,16 +472,37 @@ function CheckoutView() {
 	                </p>
 	              </div>
 	              <p className="text-base font-semibold text-[#000c26]">
-	                Rp{product.price.toLocaleString('id-ID')}
+	                {formatRupiah(subtotal)}
 	              </p>
 	            </div>
 
             <div className="mt-4 h-px w-full bg-slate-700/70" />
 
             <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-slate-700">Subtotal</p>
+              <p className="text-sm font-medium text-[#000c26]">
+                {formatRupiah(subtotal)}
+              </p>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-700">Diskon Voucher</p>
+                {appliedVoucher && (
+                  <p className="text-xs text-emerald-700">{appliedVoucher.code}</p>
+                )}
+              </div>
+              <p className="text-sm font-medium text-emerald-700">
+                -{formatRupiah(discountAmount)}
+              </p>
+            </div>
+
+            <div className="mt-4 h-px w-full bg-slate-700/70" />
+
+            <div className="mt-4 flex items-center justify-between">
               <p className="text-base font-semibold text-[#000c26]">Total :</p>
               <p className="text-base font-semibold text-[#000c26]">
-                Rp{product.price.toLocaleString('id-ID')}
+                {formatRupiah(totalAmount)}
               </p>
             </div>
           </div>

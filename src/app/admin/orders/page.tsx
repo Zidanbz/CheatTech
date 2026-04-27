@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import {
   Download,
+  ExternalLink,
   Filter,
   Search,
   WalletCards,
@@ -33,6 +34,14 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { Order } from '@/lib/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 
 function getInitials(name: string) {
   return name
@@ -40,6 +49,35 @@ function getInitials(name: string) {
     .map((n) => n[0])
     .join('')
     .toUpperCase();
+}
+
+function formatCurrency(amount?: number | null) {
+  return `Rp ${Math.max(0, Math.round(Number(amount) || 0)).toLocaleString('id-ID')}`;
+}
+
+function formatDateTime(orderDate?: Order['orderDate']) {
+  if (!orderDate || typeof orderDate.toDate !== 'function') {
+    return '-';
+  }
+
+  return `${orderDate.toDate().toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })} WIB`;
+}
+
+function formatLabel(value?: string | null) {
+  if (!value) {
+    return '-';
+  }
+
+  return value
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 const getStatusBadge = (status: Order['status']) => {
@@ -85,6 +123,7 @@ export default function OrdersPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const ordersPerPage = 6;
 
   const filteredOrders = useMemo(() => {
@@ -216,13 +255,7 @@ export default function OrdersPage() {
                       <div className="text-sm text-muted-foreground">ID: #{order.id.substring(0, 8).toUpperCase()}</div>
                     </TableCell>
                     <TableCell>
-                      {order.orderDate.toDate().toLocaleString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })} WIB
+                      {formatDateTime(order.orderDate)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{order.fulfillmentMode ?? 'self'}</Badge>
@@ -234,7 +267,13 @@ export default function OrdersPage() {
                       {getStatusBadge(order.status)}
                     </TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm">Detail</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedOrder(order)}
+                      >
+                        Detail
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -286,6 +325,133 @@ export default function OrdersPage() {
           </div>
         )}
       </Card>
+      <Dialog
+        open={selectedOrder !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedOrder(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          {selectedOrder && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Detail Transaksi</DialogTitle>
+                <DialogDescription>
+                  Ringkasan lengkap untuk pesanan #{selectedOrder.id.substring(0, 8).toUpperCase()}.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
+                      <div className="mt-2">{getStatusBadge(selectedOrder.status)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Delivery</p>
+                      <div className="mt-2">{getDeliveryBadge(selectedOrder.deliveryStatus)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Total Dibayar</p>
+                      <p className="mt-2 text-lg font-semibold">{formatCurrency(selectedOrder.price)}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Separator />
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold">Informasi Pembeli</p>
+                      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        <p><span className="font-medium text-foreground">Nama:</span> {selectedOrder.customerName}</p>
+                        <p><span className="font-medium text-foreground">Email:</span> {selectedOrder.customerEmail}</p>
+                        <p><span className="font-medium text-foreground">User ID:</span> {selectedOrder.userId || '-'}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold">Informasi Produk</p>
+                      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        <p><span className="font-medium text-foreground">Produk:</span> {selectedOrder.productName}</p>
+                        <p><span className="font-medium text-foreground">Product ID:</span> {selectedOrder.productId}</p>
+                        <p><span className="font-medium text-foreground">Fulfillment:</span> {formatLabel(selectedOrder.fulfillmentMode ?? 'self')}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold">Waktu Transaksi</p>
+                      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        <p><span className="font-medium text-foreground">Tanggal:</span> {formatDateTime(selectedOrder.orderDate)}</p>
+                        <p><span className="font-medium text-foreground">Diproses:</span> {formatDateTime(selectedOrder.processedAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold">Informasi Pembayaran</p>
+                      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        <p><span className="font-medium text-foreground">Invoice:</span> {selectedOrder.invoiceNumber || '-'}</p>
+                        <p><span className="font-medium text-foreground">Provider:</span> {formatLabel(selectedOrder.paymentProvider)}</p>
+                        <p><span className="font-medium text-foreground">Metode:</span> {formatLabel(selectedOrder.midtransPaymentType)}</p>
+                        <p><span className="font-medium text-foreground">Status Midtrans:</span> {formatLabel(selectedOrder.midtransTransactionStatus)}</p>
+                        <p><span className="font-medium text-foreground">Transaction ID:</span> {selectedOrder.midtransTransactionId || '-'}</p>
+                      </div>
+                      {selectedOrder.paymentUrl && (
+                        <Button asChild variant="outline" size="sm" className="mt-3">
+                          <a href={selectedOrder.paymentUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Buka Link Pembayaran
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold">Ringkasan Harga</p>
+                      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        <p><span className="font-medium text-foreground">Harga Awal:</span> {formatCurrency(selectedOrder.originalPrice ?? selectedOrder.price)}</p>
+                        <p><span className="font-medium text-foreground">Diskon:</span> {formatCurrency(selectedOrder.discountAmount ?? 0)}</p>
+                        <p><span className="font-medium text-foreground">Total:</span> {formatCurrency(selectedOrder.price)}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold">Voucher</p>
+                      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        <p><span className="font-medium text-foreground">Kode:</span> {selectedOrder.voucherCode || '-'}</p>
+                        <p><span className="font-medium text-foreground">Tipe:</span> {formatLabel(selectedOrder.voucherDiscountType)}</p>
+                        <p><span className="font-medium text-foreground">Nilai:</span> {selectedOrder.voucherDiscountValue ? (selectedOrder.voucherDiscountType === 'percentage' ? `${selectedOrder.voucherDiscountValue}%` : formatCurrency(selectedOrder.voucherDiscountValue)) : '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedOrder.customerNotes && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-sm font-semibold">Catatan Pelanggan</p>
+                      <p className="mt-3 rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                        {selectedOrder.customerNotes}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

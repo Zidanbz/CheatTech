@@ -35,23 +35,31 @@ import {
   useMemoFirebase,
   updateDocumentNonBlocking,
   useStorage,
+  useCollection,
 } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 import { useState, useTransition, useEffect } from 'react';
-import { Loader2, Wand2, PlusCircle, Trash2, UploadCloud } from 'lucide-react';
-import type { LandingPage } from '@/lib/types';
+import { Loader2, PlusCircle, Trash2, UploadCloud } from 'lucide-react';
+import type { LandingPage, Product } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { generateHeadlineSuggestions } from '@/ai/flows/generate-headline-suggestions';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import {
+  DEFAULT_SHOWCASE_CATEGORIES,
+  PRODUCT_CATEGORIES,
+  findProductCategoryBySlug,
+  normalizeLandingPageShowcaseCategories,
+} from '@/lib/product-categories';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const AUTO_SHOWCASE_PRODUCT_VALUE = '__auto__';
 
 const formSchema = z.object({
   heroHeadline: z.string().min(10, { message: 'Headline minimal 10 karakter.' }),
@@ -85,6 +93,14 @@ const formSchema = z.object({
       avatar: z.string().url('URL avatar tidak valid.'),
     })
   ),
+  showcaseCategories: z.array(
+    z.object({
+      categorySlug: z.string().min(1, 'Kategori utama harus dipilih.'),
+      label: z.string().min(1, 'Label kategori harus diisi.'),
+      imageHint: z.string().min(1, 'Hint gambar harus diisi.'),
+      productId: z.string(),
+    })
+  ).length(4, 'Kategori unggulan harus berjumlah 4 item.'),
 });
 
 const defaultContent: Omit<LandingPage, 'id'> = {
@@ -161,6 +177,7 @@ const defaultContent: Omit<LandingPage, 'id'> = {
       avatar: 'https://i.pravatar.cc/150?u=jessica',
     },
   ],
+  showcaseCategories: DEFAULT_SHOWCASE_CATEGORIES,
 };
 
 export default function LandingPageManagementPage() {
@@ -175,10 +192,12 @@ export default function LandingPageManagementPage() {
   );
   const { data: pageContent, isLoading: isLoadingContent } =
     useDoc<LandingPage>(pageRef);
+  const productsRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'products') : null),
+    [firestore]
+  );
+  const { data: products } = useCollection<Product>(productsRef);
 
-  const [showSuggestionsDialog, setShowSuggestionsDialog] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -189,6 +208,10 @@ export default function LandingPageManagementPage() {
   const { fields: featureFields, append: appendFeature, remove: removeFeature } = useFieldArray({ control: form.control, name: 'features' });
   const { fields: stepFields, append: appendStep, remove: removeStep } = useFieldArray({ control: form.control, name: 'steps' });
   const { fields: testimonialFields, append: appendTestimonial, remove: removeTestimonial } = useFieldArray({ control: form.control, name: 'testimonials' });
+  const { fields: showcaseCategoryFields } = useFieldArray({
+    control: form.control,
+    name: 'showcaseCategories',
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -215,7 +238,13 @@ export default function LandingPageManagementPage() {
     const initializeContent = async () => {
       if (firestore && !isLoadingContent) {
         if (pageContent) {
-          form.reset(pageContent);
+          form.reset({
+            ...defaultContent,
+            ...pageContent,
+            showcaseCategories: normalizeLandingPageShowcaseCategories(
+              pageContent.showcaseCategories
+            ),
+          });
           if (pageContent.heroImageUrl) {
             setImagePreview(pageContent.heroImageUrl);
           }
@@ -240,35 +269,6 @@ export default function LandingPageManagementPage() {
     };
     initializeContent();
   }, [firestore, pageContent, isLoadingContent, form, toast]);
-
-  async function handleGenerateSuggestions() {
-    setIsGenerating(true);
-    setShowSuggestionsDialog(true);
-    setSuggestions([]);
-    try {
-      const currentHeadline = form
-        .getValues('heroHeadline')
-        .replace(/<[^>]*>?/gm, ''); // remove html tags
-      const productDescription =
-        'Template website portofolio untuk mahasiswa dan fresh graduate untuk meningkatkan personal branding dan memikat HRD.';
-
-      const result = await generateHeadlineSuggestions({
-        currentHeadline,
-        productDescription,
-      });
-      setSuggestions(result.suggestedHeadlines);
-    } catch (error) {
-      console.error('Gagal membuat saran:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Membuat Saran',
-        description: 'Terjadi kesalahan dari AI.',
-      });
-      setShowSuggestionsDialog(false);
-    } finally {
-      setIsGenerating(false);
-    }
-  }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!pageRef || !storage) return;
@@ -305,6 +305,14 @@ export default function LandingPageManagementPage() {
       }
     });
   }
+
+  const sortedProducts = [...(products ?? [])].sort((a, b) => {
+    if (a.active !== b.active) {
+      return a.active ? -1 : 1;
+    }
+
+    return a.name.localeCompare(b.name, 'id');
+  });
   
   if (isLoadingContent) {
     return (
@@ -343,15 +351,9 @@ export default function LandingPageManagementPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Headline Utama</FormLabel>
-                              <div className="flex gap-2">
-                                <FormControl>
-                                  <Input placeholder="Headline utama landing page..." {...field} />
-                                </FormControl>
-                                <Button type="button" variant="outline" onClick={handleGenerateSuggestions} disabled={isGenerating}>
-                                  <Wand2 className="mr-0 md:mr-2 h-4 w-4" />
-                                  <span className="hidden md:inline">{isGenerating ? 'Membuat...' : 'Beri Ide'}</span>
-                                </Button>
-                              </div>
+                              <FormControl>
+                                <Input placeholder="Headline utama landing page..." {...field} />
+                              </FormControl>
                               <FormDescription>
                                 Gunakan tag &lt;span class="text-primary"&gt;...&lt;/span&gt; untuk memberi warna pada teks.
                               </FormDescription>
@@ -483,6 +485,181 @@ export default function LandingPageManagementPage() {
             </Card>
 
             <Card>
+              <AccordionItem value="showcaseCategories" className="border-b-0">
+                <AccordionTrigger className="p-6">
+                  <CardTitle>Bagian Kategori Template Terbaik</CardTitle>
+                </AccordionTrigger>
+                <AccordionContent className="px-6">
+                  <div className="space-y-6">
+                    <div>
+                      <FormLabel>Template unggulan per kategori</FormLabel>
+                      <FormDescription>
+                        Atur label kategori dan produk yang tampil di 4 kartu kategori pada halaman utama.
+                      </FormDescription>
+                    </div>
+
+                    {showcaseCategoryFields.map((showcaseField, index) => {
+                      const selectedSlug = form.watch(
+                        `showcaseCategories.${index}.categorySlug`
+                      );
+                      const categoryPreset =
+                        findProductCategoryBySlug(selectedSlug) ??
+                        PRODUCT_CATEGORIES[index] ??
+                        PRODUCT_CATEGORIES[0];
+
+                      return (
+                        <Card key={showcaseField.id} className="p-4">
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">
+                                Kartu kategori {index + 1}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Pengunjung akan diarahkan ke halaman produk kategori {categoryPreset.label}.
+                              </p>
+                            </div>
+
+                            <FormField
+                              control={form.control}
+                              name={`showcaseCategories.${index}.categorySlug`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Kategori utama</FormLabel>
+                                  <Select
+                                    onValueChange={(value) => {
+                                      const matchedCategory = PRODUCT_CATEGORIES.find(
+                                        (category) => category.slug === value
+                                      );
+                                      field.onChange(value);
+                                      if (!matchedCategory) {
+                                        return;
+                                      }
+                                      form.setValue(
+                                        `showcaseCategories.${index}.label`,
+                                        matchedCategory.label,
+                                        { shouldDirty: true }
+                                      );
+                                      form.setValue(
+                                        `showcaseCategories.${index}.imageHint`,
+                                        matchedCategory.imageHint,
+                                        { shouldDirty: true }
+                                      );
+                                    }}
+                                    value={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Pilih kategori" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {PRODUCT_CATEGORIES.map((category) => (
+                                        <SelectItem
+                                          key={category.slug}
+                                          value={category.slug}
+                                        >
+                                          {category.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`showcaseCategories.${index}.label`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Label yang tampil</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="Contoh: Portofolio"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    Teks ini tampil di badge tengah kartu kategori.
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`showcaseCategories.${index}.productId`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Produk yang ditampilkan</FormLabel>
+                                  <Select
+                                    onValueChange={(value) =>
+                                      field.onChange(
+                                        value === AUTO_SHOWCASE_PRODUCT_VALUE
+                                          ? ''
+                                          : value
+                                      )
+                                    }
+                                    value={
+                                      field.value || AUTO_SHOWCASE_PRODUCT_VALUE
+                                    }
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Pilih produk" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value={AUTO_SHOWCASE_PRODUCT_VALUE}>
+                                        Pilih otomatis sesuai kategori
+                                      </SelectItem>
+                                      {sortedProducts.map((product) => (
+                                        <SelectItem key={product.id} value={product.id}>
+                                          {product.name}
+                                          {product.active ? '' : ' (Nonaktif)'}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription>
+                                    Jika kosong, sistem akan memilih produk aktif pertama yang cocok dengan kategori. Produk nonaktif tidak akan tampil di homepage.
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`showcaseCategories.${index}.imageHint`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Hint gambar</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="Contoh: portfolio website"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    Dipakai sebagai hint internal untuk gambar kartu kategori.
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Card>
+
+            <Card>
               <AccordionItem value="steps" className="border-b-0">
                 <AccordionTrigger className="p-6"><CardTitle>Bagian 3 Langkah Mudah</CardTitle></AccordionTrigger>
                 <AccordionContent className="px-6">
@@ -549,40 +726,6 @@ export default function LandingPageManagementPage() {
         </form>
       </Form>
 
-      <Dialog open={showSuggestionsDialog} onOpenChange={setShowSuggestionsDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Saran Headline dari AI</DialogTitle>
-            <DialogDescription>
-              Klik salah satu untuk menggunakannya. Anda bisa menambahkan tag span secara manual nanti.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {isGenerating ? (
-              <div className="flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {suggestions.map((s, i) => (
-                  <li key={i}>
-                    <Button
-                      variant="outline"
-                      className="w-full h-auto text-left justify-start py-2"
-                      onClick={() => {
-                        form.setValue('heroHeadline', s);
-                        setShowSuggestionsDialog(false);
-                      }}
-                    >
-                      {s}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

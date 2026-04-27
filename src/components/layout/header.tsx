@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
+import SectionLink from "@/components/layout/section-link";
 
 function parseCssRgb(value: string) {
   const open = value.indexOf("(");
@@ -66,6 +67,7 @@ export default function Header() {
   const rafIdRef = useRef<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isBackgroundLight, setIsBackgroundLight] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -96,9 +98,9 @@ export default function Header() {
   }, []);
 
   const navLinks = [
-    { href: "/#keuntungan", label: "Why CheatTech?" },
-    { href: "/#cara-kerja", label: "Cara Kerja" },
-    { href: "/#custom", label: "Website Custom" },
+    { sectionId: "keuntungan", label: "Why CheatTech?" },
+    { sectionId: "cara-kerja", label: "Cara Kerja" },
+    { sectionId: "custom", label: "Website Custom" },
   ];
 
   const hubungiLink = buildWhatsAppLink({
@@ -205,15 +207,19 @@ export default function Header() {
 
           <nav className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
-              <Link key={link.label} href={link.href} className={navLinkClass}>
+              <SectionLink
+                key={link.label}
+                sectionId={link.sectionId}
+                className={navLinkClass}
+              >
                 {link.label}
-              </Link>
+              </SectionLink>
             ))}
           </nav>
 
           <div className="flex items-center gap-2">
             <div className="md:hidden">
-              <Sheet>
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className={mobileButtonClass}>
                     <Menu className="h-5 w-5" />
@@ -230,16 +236,18 @@ export default function Header() {
                     </Link>
                     <nav className="flex flex-col gap-4">
                       {navLinks.map((link) => (
-                        <Link
+                        <SectionLink
                           key={link.label}
-                          href={link.href}
+                          sectionId={link.sectionId}
+                          onNavigate={() => setIsMobileMenuOpen(false)}
                           className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
                         >
                           {link.label}
-                        </Link>
+                        </SectionLink>
                       ))}
                       <Link
                         href="/produk"
+                        onClick={() => setIsMobileMenuOpen(false)}
                         className="mt-2 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
                       >
                         Beli Template
@@ -248,6 +256,7 @@ export default function Header() {
                         href={hubungiLink}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={() => setIsMobileMenuOpen(false)}
                         className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium"
                       >
                         Hubungi Kami

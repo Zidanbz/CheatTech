@@ -65,9 +65,9 @@ export default function RootLayout({
                   className={`pointer-events-none fixed inset-0 z-0 ${pageBackdropClass}`}
                 />
               )}
-              <div className="relative z-10 flex min-h-dvh flex-col">
+              <div className="relative z-10 flex flex-col">
                 <Header />
-                <main className={cn('flex-1', !isHome && !isProductsPage && 'pt-24 md:pt-28')}>
+                <main className={cn(!isHome && 'flex-1', !isHome && !isProductsPage && 'pt-24 md:pt-28')}>
                   {children}
                 </main>
                 <Footer />
